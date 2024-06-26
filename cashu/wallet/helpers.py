@@ -58,7 +58,7 @@ async def redeem_TokenV3_multimint(wallet: Wallet, token: TokenV3) -> Wallet:
         keyset_ids = mint_wallet._get_proofs_keysets(t.proofs)
         logger.trace(f"Keysets in tokens: {' '.join(set(keyset_ids))}")
         await mint_wallet.load_mint()
-        proofs_to_keep, _ = await mint_wallet.redeem(t.proofs)
+        proofs_to_keep, _ = await mint_wallet.redeem(t.proofs, t.C_tot)
         print(f"Received {mint_wallet.unit.str(sum_proofs(proofs_to_keep))}")
 
     # return the last mint_wallet

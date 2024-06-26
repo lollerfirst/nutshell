@@ -115,6 +115,23 @@ def verify(a: PrivateKey, C: PublicKey, secret_msg: str) -> bool:
     # END: BACKWARDS COMPATIBILITY < 0.15.1
     return valid
 
+def verify_bulk(a_arr: List[PrivateKey], C_tot: PublicKey, secrets: List[str]) -> bool:
+    P = None
+    for a, secret in zip(a_arr, secrets):
+        if P is None:
+            P = hash_to_curve(secret.encode("utf-8")).mult(a)
+        else:
+            P = P + hash_to_curve(secret.encode("utf-8")).mult(a)
+    return False if P is None else C_tot == P
+
+def cumulative_C(C_arr: List[PublicKey]) -> PublicKey:
+    """Sums the C factors from a set of proofs into a cumulative C_tot.
+    """
+    assert len(C_arr) > 0, "cumulative_C: got empty input list"
+    C_tot = C_arr[0]
+    for C in C_arr[1:]:
+        C_tot = C_tot + C
+    return C_tot
 
 def hash_e(*publickeys: PublicKey) -> bytes:
     e_ = ""

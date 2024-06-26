@@ -201,6 +201,7 @@ class PostMeltRequest(BaseModel):
     outputs: Union[List[BlindedMessage], None] = Field(
         None, max_items=settings.mint_max_request_length
     )
+    C_tot: Optional[str] = None
 
 
 class PostMeltResponse(BaseModel):
@@ -231,6 +232,7 @@ class PostSplitRequest(BaseModel):
     outputs: List[BlindedMessage] = Field(
         ..., max_items=settings.mint_max_request_length
     )
+    C_tot: Optional[str] = None
 
 
 class PostSplitResponse(BaseModel):

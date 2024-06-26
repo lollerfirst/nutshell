@@ -452,10 +452,11 @@ class LedgerAPI(LedgerAPIDeprecated, object):
         self,
         proofs: List[Proof],
         outputs: List[BlindedMessage],
+        C_tot: Optional[str]
     ) -> List[BlindedSignature]:
         """Consume proofs and create new promises based on amount split."""
         logger.debug("Calling split. POST /v1/swap")
-        split_payload = PostSplitRequest(inputs=proofs, outputs=outputs)
+        split_payload = PostSplitRequest(inputs=proofs, outputs=outputs, C_tot=C_tot)
 
         # construct payload
         def _splitrequest_include_fields(proofs: List[Proof]):
@@ -472,6 +473,7 @@ class LedgerAPI(LedgerAPIDeprecated, object):
                 "inputs": {i: proofs_include for i in range(len(proofs))},
             }
 
+        logger.debug(f"{split_payload = }")
         resp = await self.httpx.post(
             join(self.url, "/v1/swap"),
             json=split_payload.dict(include=_splitrequest_include_fields(proofs)),  # type: ignore

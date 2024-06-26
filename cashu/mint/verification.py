@@ -11,7 +11,7 @@ from ..core.base import (
     Unit,
 )
 from ..core.crypto import b_dhke
-from ..core.crypto.secp import PublicKey
+from ..core.crypto.secp import PublicKey, PrivateKey
 from ..core.db import Database
 from ..core.errors import (
     NoSecretInProofsError,
@@ -40,7 +40,10 @@ class LedgerVerification(
     lightning: Dict[Unit, LightningBackend]
 
     async def verify_inputs_and_outputs(
-        self, *, proofs: List[Proof], outputs: Optional[List[BlindedMessage]] = None
+        self, *,
+        proofs: List[Proof],
+        outputs: Optional[List[BlindedMessage]] = None,
+        C_tot: Optional[str] = None
     ):
         """Checks all proofs and outputs for validity.
 
@@ -48,6 +51,7 @@ class LedgerVerification(
             proofs (List[Proof]): List of proofs to check.
             outputs (Optional[List[BlindedMessage]], optional): List of outputs to check.
                 Must be provided for a swap but not for a melt. Defaults to None.
+            C_tot (Optional[str], optional): Cumulative C from all the proofs.
 
         Raises:
             Exception: Scripts did not validate.
@@ -69,8 +73,13 @@ class LedgerVerification(
         if not self._verify_no_duplicate_proofs(proofs):
             raise TransactionError("duplicate proofs.")
         # Verify ecash signatures
-        if not all([self._verify_proof_bdhke(p) for p in proofs]):
-            raise TransactionError("could not verify proofs.")
+        # If C_tot is specified, switch to bulk proof
+        if C_tot and C_tot != "":
+            if not self._verify_bulk_proof_bdhke(proofs, C_tot):
+                raise TransactionError("could not verify proofs aggregate.")
+        else:
+            if not all([self._verify_proof_bdhke(p) for p in proofs]):
+                raise TransactionError("could not verify proofs.")
         # Verify input spending conditions
         if not all([self._verify_input_spending_conditions(p) for p in proofs]):
             raise TransactionError("validation of input spending conditions failed.")
@@ -200,6 +209,28 @@ class LedgerVerification(
             logger.trace("Proof verified.")
         else:
             logger.trace(f"Proof verification failed for {proof.secret} – {proof.C}.")
+        return valid
+
+    def _verify_bulk_proof_bdhke(self, proofs: List[Proof], control: str) -> bool:
+        logger.trace(
+            f"Validating bulk proofs with keyset"
+            f" {self.keysets[proof.id].id}."
+        )
+        C_tot = PublicKey(bytes.fromhex(control), raw=True)
+        private_keys = []
+        proof_secrets = []
+        for proof in proofs:
+            assert proof.id in self.keysets, f"keyset {proof.id} unknown"
+            
+            # use the appropriate active keyset for this proof.id
+            private_keys.append(self.keysets[proof.id].private_keys[proof.amount])
+            proof_secrets.append(proof.secret)
+
+        valid = b_dhke.verify_bulk(private_keys, C_tot, proof_secrets)
+        if valid:
+            logger.trace("Bulk Proof verified.")
+        else:
+            logger.trace(f"Bulk Proof verification failed for {proofs} – {C_tot}.")
         return valid
 
     def _verify_input_output_amounts(

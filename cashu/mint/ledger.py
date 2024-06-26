@@ -10,6 +10,7 @@ from ..core.base import (
     Amount,
     BlindedMessage,
     BlindedSignature,
+    BulkProof,
     MeltQuote,
     MeltQuoteState,
     Method,
@@ -482,7 +483,7 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
         self,
         *,
         outputs: List[BlindedMessage],
-        quote_id: str,
+        quote_id: str
     ) -> List[BlindedSignature]:
         """Mints new coins if quote with `quote_id` was paid. Ingest blind messages `outputs` and returns blind signatures `promises`.
 
@@ -831,6 +832,7 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
         proofs: List[Proof],
         quote: str,
         outputs: Optional[List[BlindedMessage]] = None,
+        C_tot: Optional[str] = None
     ) -> Tuple[str, List[BlindedSignature]]:
         """Invalidates proofs and pays a Lightning invoice.
 
@@ -889,7 +891,7 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
         # verify inputs and their spending conditions
         # note, we do not verify outputs here, as they are only used for returning overpaid fees
         # we should have used _verify_outputs here already (see above)
-        await self.verify_inputs_and_outputs(proofs=proofs)
+        await self.verify_inputs_and_outputs(proofs=proofs, C_tot=C_tot)
 
         # set proofs to pending to avoid race conditions
         await self.db_write._set_proofs_pending(proofs, quote_id=melt_quote.quote)
@@ -951,6 +953,7 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
         proofs: List[Proof],
         outputs: List[BlindedMessage],
         keyset: Optional[MintKeyset] = None,
+        C_tot: Optional[str] = None
     ):
         """Consumes proofs and prepares new promises based on the amount split. Used for splitting tokens
         Before sending or for redeeming tokens for new ones that have been received by another wallet.
@@ -959,6 +962,7 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
             proofs (List[Proof]): Proofs to be invalidated for the split.
             outputs (List[BlindedMessage]): New outputs that should be signed in return.
             keyset (Optional[MintKeyset], optional): Keyset to use. Uses default keyset if not given. Defaults to None.
+            C_tot (Optiona[str], optional): Optional cumulative C of all the proofs. Specify if proofs have omitted C.
 
         Raises:
             Exception: Validation of proofs or outputs failed
@@ -973,7 +977,11 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
         # verify_inputs_and_outputs, we check it here.
         self._verify_equation_balanced(proofs, outputs)
         # verify spending inputs, outputs, and spending conditions
-        await self.verify_inputs_and_outputs(proofs=proofs, outputs=outputs)
+        await self.verify_inputs_and_outputs(
+            proofs=proofs,
+            outputs=outputs,
+            C_tot=C_tot
+        )
 
         await self.db_write._set_proofs_pending(proofs)
         try:

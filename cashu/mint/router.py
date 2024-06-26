@@ -303,7 +303,10 @@ async def melt(request: Request, payload: PostMeltRequest) -> PostMeltResponse:
     """
     logger.trace(f"> POST /v1/melt/bolt11: {payload}")
     preimage, change_promises = await ledger.melt(
-        proofs=payload.inputs, quote=payload.quote, outputs=payload.outputs
+        proofs=payload.inputs,
+        quote=payload.quote,
+        outputs=payload.outputs,
+        C_tot=payload.C_tot
     )
     resp = PostMeltResponse(
         paid=True, payment_preimage=preimage, change=change_promises
@@ -335,7 +338,11 @@ async def swap(
     logger.trace(f"> POST /v1/swap: {payload}")
     assert payload.outputs, Exception("no outputs provided.")
 
-    signatures = await ledger.split(proofs=payload.inputs, outputs=payload.outputs)
+    signatures = await ledger.split(
+        proofs=payload.inputs,
+        outputs=payload.outputs,
+        C_tot=payload.C_tot
+    )
 
     return PostSplitResponse(signatures=signatures)
 

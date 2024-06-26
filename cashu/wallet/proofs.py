@@ -14,6 +14,7 @@ from ..core.base import (
     Unit,
     WalletKeyset,
 )
+from ..core.helpers import get_cumulative_C
 from ..core.db import Database
 from ..wallet.crud import (
     get_keysets,
@@ -93,7 +94,7 @@ class WalletProofs(SupportsDb, SupportsKeysets):
         return mint_urls
 
     async def _make_token(
-        self, proofs: List[Proof], include_mints=True, include_unit=True
+        self, proofs: List[Proof], include_mints=True, include_unit=True, bulk_proof=True
     ) -> TokenV3:
         """
         Takes list of proofs and produces a TokenV3 by looking up
@@ -102,6 +103,7 @@ class WalletProofs(SupportsDb, SupportsKeysets):
         Args:
             proofs (List[Proof]): List of proofs to be included in the token
             include_mints (bool, optional): Whether to include the mint URLs in the token. Defaults to True.
+            bulk_proof (bool, optional): Make a shorter token by including only a cumulative C (https://github.com/cashubtc/nuts/issues/140)
 
         Returns:
             TokenV3: TokenV3 object
@@ -122,10 +124,17 @@ class WalletProofs(SupportsDb, SupportsKeysets):
             # append all url-grouped proofs to token
             for url, ids in mint_urls.items():
                 mint_proofs = [p for p in proofs if p.id in ids]
-                token.token.append(TokenV3Token(mint=url, proofs=mint_proofs))
+                C_tot = None
+                if bulk_proof:
+                    C_tot = get_cumulative_C(mint_proofs)
+                    mint_proofs = [Proof.strip_C(proof) for proof in mint_proofs]
+                token.token.append(TokenV3Token(mint=url, proofs=mint_proofs, C_tot=C_tot))
         else:
-            token_proofs = TokenV3Token(proofs=proofs)
-            token.token.append(token_proofs)
+            C_tot = None
+            if bulk_proof:
+                C_tot = get_cumulative_C(proofs)
+                proofs = [Proof.strip_C(proof) for proof in proofs]
+            token.token.append(TokenV3Token(proofs=proofs, C_tot=C_tot))
         return token
 
     async def serialize_proofs(

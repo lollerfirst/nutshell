@@ -123,7 +123,7 @@ class Proof(BaseModel):
     amount: int = 0
     secret: str = ""  # secret or message to be blinded and signed
     Y: str = ""  # hash_to_curve(secret)
-    C: str = ""  # signature on secret, unblinded by wallet
+    C: Optional[str] = None  # signature on secret, unblinded by wallet
     dleq: Optional[DLEQWallet] = None  # DLEQ proof
     witness: Union[None, str] = ""  # witness for spending condition
 
@@ -168,6 +168,15 @@ class Proof(BaseModel):
             return_dict["witness"] = self.witness
 
         return return_dict
+    
+    @classmethod
+    def strip_C(cls, proof: Proof) -> Proof:
+        """
+        Creates a new Proof object from the provided one, with the C field set to None.
+        """
+        new_data = proof.dict()
+        new_data["C"] = None
+        return cls(**new_data)
 
     def to_dict_no_dleq(self):
         # dictionary without the fields that don't need to be send to Carol
@@ -744,6 +753,7 @@ class TokenV2(BaseModel):
 class TokenV3Token(BaseModel):
     mint: Optional[str] = None
     proofs: List[Proof]
+    C_tot: Optional[str] = None
 
     def to_dict(self, include_dleq=False):
         return_dict = dict(proofs=[p.to_dict(include_dleq) for p in self.proofs])

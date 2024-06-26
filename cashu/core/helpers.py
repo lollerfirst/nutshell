@@ -5,6 +5,9 @@ from typing import List
 
 from ..core.base import Amount, BlindedSignature, Proof, Unit
 from ..core.settings import settings
+from ..core.crypto import b_dhke
+from ..core.crypto.keys import PublicKey
+
 
 
 def amount_summary(proofs: List[Proof], unit: Unit) -> str:
@@ -17,6 +20,10 @@ def amount_summary(proofs: List[Proof], unit: Unit) -> str:
         f"{', '.join([f'{Amount(unit, a).str()} ({c}x)' for a, c in amounts_we_have])}"
     )
 
+def get_cumulative_C(proofs: List[Proof]) -> str:
+    C_arr = [PublicKey(bytes.fromhex(proof.C), raw=True) for proof in proofs]
+    C_tot = b_dhke.cumulative_C(C_arr)
+    return C_tot.serialize().hex()
 
 def sum_proofs(proofs: List[Proof]):
     return sum([p.amount for p in proofs])
