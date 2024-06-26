@@ -10,7 +10,6 @@ from ..core.base import (
     Amount,
     BlindedMessage,
     BlindedSignature,
-    BulkProof,
     MeltQuote,
     MeltQuoteState,
     Method,

@@ -170,14 +170,14 @@ class Proof(BaseModel):
         return return_dict
     
     @classmethod
-    def strip_C(cls, proof: Proof) -> Proof:
+    def strip_C(cls, proof):
         """
         Creates a new Proof object from the provided one, with the C field set to None.
         """
         new_data = proof.dict()
         new_data["C"] = None
         return cls(**new_data)
-
+    
     def to_dict_no_dleq(self):
         # dictionary without the fields that don't need to be send to Carol
         return dict(id=self.id, amount=self.amount, secret=self.secret, C=self.C)

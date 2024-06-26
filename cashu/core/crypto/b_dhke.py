@@ -51,7 +51,7 @@ If true, a in A = a*G must be equal to a in C' = a*B'
 """
 
 import hashlib
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 from secp256k1 import PrivateKey, PublicKey
 

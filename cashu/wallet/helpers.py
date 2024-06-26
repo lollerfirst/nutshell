@@ -4,7 +4,7 @@ import os
 
 from loguru import logger
 
-from ..core.base import TokenV1, TokenV2, TokenV3, TokenV3Token
+from ..core.base import TokenV1, TokenV2, TokenV3, TokenV3Token, Proof
 from ..core.db import Database
 from ..core.helpers import sum_proofs
 from ..core.migrations import migrate_databases
