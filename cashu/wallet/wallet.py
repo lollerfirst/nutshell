@@ -815,6 +815,7 @@ class Wallet(
             assert (
                 proof.id in self.keysets
             ), f"Keyset {proof.id} not known, can not verify DLEQ."
+            assert proof.C, f"proof {proof.secret} is missing `C`"
             if not b_dhke.carol_verify_dleq(
                 secret_msg=proof.secret,
                 C=PublicKey(bytes.fromhex(proof.C), raw=True),

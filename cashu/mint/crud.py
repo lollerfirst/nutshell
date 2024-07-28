@@ -328,7 +328,7 @@ class LedgerCrudSqlite(LedgerCrud):
             """,
             {
                 "amount": proof.amount,
-                "c": proof.C,
+                "c": proof.C or "",
                 "secret": proof.secret,
                 "y": proof.Y,
                 "id": proof.id,
@@ -398,7 +398,7 @@ class LedgerCrudSqlite(LedgerCrud):
             """,
             {
                 "amount": proof.amount,
-                "c": proof.C,
+                "c": proof.C or "",
                 "secret": proof.secret,
                 "y": proof.Y,
                 "id": proof.id,

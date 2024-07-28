@@ -51,7 +51,7 @@ If true, a in A = a*G must be equal to a in C' = a*B'
 """
 
 import hashlib
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 from secp256k1 import PrivateKey, PublicKey
 
@@ -115,6 +115,27 @@ def verify(a: PrivateKey, C: PublicKey, secret_msg: str) -> bool:
     # END: BACKWARDS COMPATIBILITY < 0.15.1
     return valid
 
+def verify_bulk(
+    keys: List[PrivateKey],
+    C_tot: PublicKey,
+    secrets: List[str],
+) -> bool:
+    assert len(keys) == len(secrets), f"{len(keys) = } != {len(secrets) = }"
+    assert len(keys) > 0, "Zero length secrets and keys list"
+    T: PublicKey = hash_to_curve(secrets[0].encode("utf-8")).mult(keys[0])
+    for a, secret in zip(keys[1:], secrets[1:]):
+        T += hash_to_curve(secret.encode("utf-8")).mult(a)
+    valid = T == C_tot
+    ''' Needed?
+    # BEGIN: BACKWARDS COMPATIBILITY < 0.15.1
+    if not valid:
+        T: PublicKey = hash_to_curve_deprecated(secrets[0].encode("utf-8")).mult(keys[0])
+        for a, secret in zip(keys[1:], secrets[1:]):
+            T += hash_to_curve_deprecated(secret.encode("utf-8")).mult(a)
+        valid = T == C_tot
+    # END: BACKWARDS COMPATIBILITY < 0.15.1
+    '''
+    return valid
 
 def hash_e(*publickeys: PublicKey) -> bytes:
     e_ = ""

@@ -48,6 +48,7 @@ class LedgerVerification(
         proofs: List[Proof],
         outputs: Optional[List[BlindedMessage]] = None,
         conn: Optional[Connection] = None,
+        C_tot: Optional[str] = None,
     ):
         """Checks all proofs and outputs for validity.
 
@@ -75,8 +76,12 @@ class LedgerVerification(
         # verify that only unique proofs were used
         if not self._verify_no_duplicate_proofs(proofs):
             raise TransactionError("duplicate proofs.")
-        # Verify ecash signatures
-        if not all([self._verify_proof_bdhke(p) for p in proofs]):
+        # Verify ecash signatures (verify bulk if C_tot specified)
+        if C_tot is not None:
+            logger.trace("Detected aggregate proofs option")
+            if not self._verify_bulk_proof_bdhke(proofs, C_tot):
+                raise TransactionError("could not verify proofs (bulk).")
+        elif not all([self._verify_proof_bdhke(p) for p in proofs]):
             raise TransactionError("could not verify proofs.")
         # Verify input spending conditions
         if not all([self._verify_input_spending_conditions(p) for p in proofs]):
@@ -181,13 +186,31 @@ class LedgerVerification(
         )
         # use the appropriate active keyset for this proof.id
         private_key_amount = self.keysets[proof.id].private_keys[proof.amount]
-
+        
+        assert proof.C, f"proof {proof.secret} is missing `C`"
         C = PublicKey(bytes.fromhex(proof.C), raw=True)
         valid = b_dhke.verify(private_key_amount, C, proof.secret)
         if valid:
             logger.trace("Proof verified.")
         else:
             logger.trace(f"Proof verification failed for {proof.secret} – {proof.C}.")
+        return valid
+    
+    def _verify_bulk_proof_bdhke(self, proofs: List[Proof], C_tot: str) -> bool:
+        """Verifies that the proof of promise was issued by this ledger"""
+        assert all([p.id in self.keysets for p in proofs]), "unknown keysets identified"
+        logger.trace(
+            "Validating bulk proofs..."
+        )
+        # Collect the correct private keys
+        privkeys = [self.keysets[p.id].private_keys[p.amount] for p in proofs]
+        secrets = [p.secret for p in proofs]
+        C = PublicKey(bytes.fromhex(C_tot), raw=True)
+        valid = b_dhke.verify_bulk(privkeys, C, secrets)
+        if valid:
+            logger.trace("Proofs verified.")
+        else:
+            logger.trace("Proofs verification failed (bulk).")
         return valid
 
     def _verify_input_output_amounts(

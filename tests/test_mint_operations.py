@@ -1,14 +1,21 @@
 import pytest
 import pytest_asyncio
+from secp256k1 import PublicKey
 
 from cashu.core.base import MeltQuoteState, MintQuoteState
 from cashu.core.helpers import sum_proofs
-from cashu.core.models import PostMeltQuoteRequest, PostMintQuoteRequest
+from cashu.core.models import (
+    PostMeltOptions,
+    PostMeltQuoteRequest,
+    PostMintQuoteRequest,
+)
 from cashu.mint.ledger import Ledger
 from cashu.wallet.wallet import Wallet
 from cashu.wallet.wallet import Wallet as Wallet1
 from tests.conftest import SERVER_ENDPOINT
 from tests.helpers import get_real_invoice, is_fake, is_regtest, pay_if_regtest
+
+fake_invoice_128sats = "lnbcrt1280n1pn2vxckpp5p5m8949qel823vpuhkkr8pa5qf5sm0mnauuy2vkr3ggg7fl86zkqdqqcqzzsxqyz5vqsp5grcsudhmxyu77cadgswuqc5xjj8q736g8guapu6s7y8hxx4jxpvs9qxpqysgqnx2px09e5axy9dla52tatvv0ll2y9yq73ar2hvdaj32hhm6upzfxsk9a3v9a3vyvd6hrnlwc2etss872zyq2lgm65mn8t2vcs7arm9sptlu8s8"
 
 
 async def assert_err(f, msg):
@@ -400,6 +407,41 @@ async def test_check_proof_state(wallet1: Wallet, ledger: Ledger):
 
     proof_states = await ledger.db_read.get_proofs_states(Ys=[p.Y for p in send_proofs])
     assert all([p.state.value == "UNSPENT" for p in proof_states])
+
+@pytest.mark.asyncio
+async def test_melt_aggregate_proofs(wallet1: Wallet, ledger: Ledger):
+    invoice = await wallet1.request_mint(256)
+    await pay_if_regtest(invoice.bolt11)
+    proofs = await wallet1.mint(256, id=invoice.id)
+
+    # Split amounts
+    keep, send = await wallet1.split(proofs, 129)
+    
+    # Manually aggregating the proofs
+    assert all([p.C for p in proofs])
+    C_tot = PublicKey(pubkey=bytes.fromhex(send[0].C), raw=True)
+    send[0].C = None
+    for p in send[1:]:
+        C_tot += PublicKey(pubkey=bytes.fromhex(p.C), raw=True)
+        p.C = None
+    
+    # prepare melt quote
+    invoice = fake_invoice_128sats if is_fake else get_real_invoice(128)['payment_request']
+    melt_quote = await ledger.melt_quote(
+        PostMeltQuoteRequest(
+            unit="sat",
+            request=invoice,
+        )
+    )
+    # Trying to melt aggregated proofs
+    response = await ledger.melt(
+        quote=melt_quote.quote,
+        proofs=send,
+        options=PostMeltOptions(
+            C_tot=C_tot.serialize().hex()
+        )
+    )
+    assert response.state == 'PAID'
 
 
 # TODO: test keeps running forever, needs to be fixed

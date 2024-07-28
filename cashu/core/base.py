@@ -125,7 +125,7 @@ class Proof(BaseModel):
     amount: int = 0
     secret: str = ""  # secret or message to be blinded and signed
     Y: str = ""  # hash_to_curve(secret)
-    C: str = ""  # signature on secret, unblinded by wallet
+    C: Optional[str] = None  # signature on secret, unblinded by wallet
     dleq: Optional[DLEQWallet] = None  # DLEQ proof
     witness: Union[None, str] = None  # witness for spending condition
 
@@ -940,7 +940,7 @@ class TokenV4Proof(BaseModel):
 
     a: int
     s: str  # secret
-    c: bytes  # signature
+    c: Optional[bytes]  # signature
     d: Optional[TokenV4DLEQ] = None  # DLEQ proof
     w: Optional[str] = None  # witness
 
@@ -949,7 +949,7 @@ class TokenV4Proof(BaseModel):
         return cls(
             a=proof.amount,
             s=proof.secret,
-            c=bytes.fromhex(proof.C),
+            c=bytes.fromhex(proof.C) if proof.C else None,
             d=(
                 TokenV4DLEQ(
                     e=bytes.fromhex(proof.dleq.e),
@@ -1019,7 +1019,7 @@ class TokenV4(Token):
                 id=token.i.hex(),
                 amount=p.a,
                 secret=p.s,
-                C=p.c.hex(),
+                C=p.c.hex() if p.c else None,
                 dleq=(
                     DLEQWallet(
                         e=p.d.e.hex(),
@@ -1058,7 +1058,7 @@ class TokenV4(Token):
                         TokenV4Proof(
                             a=p.amount,
                             s=p.secret,
-                            c=bytes.fromhex(p.C),
+                            c=bytes.fromhex(p.C) if p.C else None,
                             d=(
                                 TokenV4DLEQ(
                                     e=bytes.fromhex(p.dleq.e),
@@ -1146,7 +1146,7 @@ class TokenV4(Token):
                             id=token.i.hex(),
                             amount=p.a,
                             secret=p.s,
-                            C=p.c.hex(),
+                            C=p.c.hex() if p.c else None,
                             dleq=(
                                 DLEQWallet(
                                     e=p.d.e.hex(),

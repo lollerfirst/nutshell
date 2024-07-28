@@ -40,9 +40,11 @@ from ..core.errors import (
 )
 from ..core.helpers import sum_proofs
 from ..core.models import (
+    PostMeltOptions,
     PostMeltQuoteRequest,
     PostMeltQuoteResponse,
     PostMintQuoteRequest,
+    PostSwapOptions,
 )
 from ..core.settings import settings
 from ..core.split import amount_split
@@ -844,6 +846,7 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
         proofs: List[Proof],
         quote: str,
         outputs: Optional[List[BlindedMessage]] = None,
+        options: Optional[PostMeltOptions] = None,
     ) -> PostMeltQuoteResponse:
         """Invalidates proofs and pays a Lightning invoice.
 
@@ -902,7 +905,7 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
         # verify inputs and their spending conditions
         # note, we do not verify outputs here, as they are only used for returning overpaid fees
         # we should have used _verify_outputs here already (see above)
-        await self.verify_inputs_and_outputs(proofs=proofs)
+        await self.verify_inputs_and_outputs(proofs=proofs, C_tot=options.C_tot if options else None)
 
         # set proofs to pending to avoid race conditions
         await self.db_write._verify_spent_proofs_and_set_pending(
@@ -969,6 +972,7 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
         proofs: List[Proof],
         outputs: List[BlindedMessage],
         keyset: Optional[MintKeyset] = None,
+        options: Optional[PostSwapOptions] = None,
     ):
         """Consumes proofs and prepares new promises based on the amount swap. Used for swapping tokens
         Before sending or for redeeming tokens for new ones that have been received by another wallet.
@@ -986,7 +990,7 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
         """
         logger.trace("swap called")
         # verify spending inputs, outputs, and spending conditions
-        await self.verify_inputs_and_outputs(proofs=proofs, outputs=outputs)
+        await self.verify_inputs_and_outputs(proofs=proofs, outputs=outputs, C_tot=options.C_tot if options else None)
         await self.db_write._verify_spent_proofs_and_set_pending(proofs)
         try:
             async with self.db.get_connection(lock_table="proofs_pending") as conn:

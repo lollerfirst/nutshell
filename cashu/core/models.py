@@ -216,6 +216,8 @@ class PostMeltQuoteResponse(BaseModel):
 
 # ------- API: MELT -------
 
+class PostMeltOptions(BaseModel):
+    C_tot: Optional[str] = None
 
 class PostMeltRequest(BaseModel):
     quote: str = Field(..., max_length=settings.mint_max_request_length)  # quote id
@@ -223,6 +225,7 @@ class PostMeltRequest(BaseModel):
     outputs: Union[List[BlindedMessage], None] = Field(
         None, max_items=settings.mint_max_request_length
     )
+    options: Optional[PostMeltOptions] = None
 
 
 class PostMeltResponse_deprecated(BaseModel):
@@ -241,12 +244,15 @@ class PostMeltRequest_deprecated(BaseModel):
 
 # ------- API: SPLIT -------
 
+class PostSwapOptions(BaseModel):
+    C_tot: Optional[str] = None
 
 class PostSwapRequest(BaseModel):
     inputs: List[Proof] = Field(..., max_items=settings.mint_max_request_length)
     outputs: List[BlindedMessage] = Field(
         ..., max_items=settings.mint_max_request_length
     )
+    options: Optional[PostSwapOptions] = None
 
 
 class PostSwapResponse(BaseModel):
