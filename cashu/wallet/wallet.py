@@ -565,6 +565,7 @@ class Wallet(
     async def redeem(
         self,
         proofs: List[Proof],
+        C_tot: Optional[bytes] = None,
     ) -> Tuple[List[Proof], List[Proof]]:
         """Redeem proofs by sending them to yourself (by calling a split).)
         Calls `add_witnesses_to_proofs` which parses all proofs and checks whether their
@@ -575,7 +576,7 @@ class Wallet(
         """
         # verify DLEQ of incoming proofs
         self.verify_proofs_dleq(proofs)
-        return await self.split(proofs=proofs, amount=0)
+        return await self.split(proofs=proofs, amount=0, C_tot=C_tot.hex() if C_tot else None)
 
     def swap_send_and_keep_output_amounts(
         self, proofs: List[Proof], amount: int, fees: int = 0
@@ -613,6 +614,7 @@ class Wallet(
         proofs: List[Proof],
         amount: int,
         secret_lock: Optional[Secret] = None,
+        C_tot: Optional[str] = None,
     ) -> Tuple[List[Proof], List[Proof]]:
         """Calls the swap API to split the proofs into two sets of proofs, one for keeping and one for sending.
 
@@ -672,7 +674,7 @@ class Wallet(
         outputs = await self.add_witnesses_to_outputs(proofs, outputs)
 
         # Call swap API
-        promises = await super().split(proofs, outputs)
+        promises = await super().split(proofs, outputs, C_tot)
 
         # Construct proofs from returned promises (i.e., unblind the signatures)
         new_proofs = await self._construct_proofs(

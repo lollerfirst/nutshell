@@ -949,7 +949,8 @@ class TokenV4Proof(BaseModel):
         return cls(
             a=proof.amount,
             s=proof.secret,
-            c=bytes.fromhex(proof.C) if proof.C else None,
+            c=bytes.fromhex(proof.C)
+                if proof.C else None,
             d=(
                 TokenV4DLEQ(
                     e=bytes.fromhex(proof.dleq.e),
@@ -980,6 +981,8 @@ class TokenV4(Token):
     t: List[TokenV4Token]
     # memo
     d: Optional[str] = None
+    # cumulative sum of the unblinded signatures
+    ct: Optional[bytes] = None
 
     @property
     def mint(self) -> str:
@@ -1083,7 +1086,7 @@ class TokenV4(Token):
         cls.u = tokenv3.unit or "sat"
         return cls(t=cls.t, d=cls.d, m=cls.m, u=cls.u)
 
-    def serialize_to_dict(self, include_dleq=False):
+    def serialize_to_dict(self, include_dleq=False, strip_C=False):
         return_dict: Dict[str, Any] = dict(t=[t.dict() for t in self.t])
         # strip dleq if needed
         if not include_dleq:
@@ -1091,6 +1094,12 @@ class TokenV4(Token):
                 for proof in token["p"]:
                     if "d" in proof:
                         del proof["d"]
+        # strip individual C fields
+        if strip_C:
+            for token in return_dict["t"]:
+                for proof in token["p"]:
+                    if "c" in proof:
+                        del proof["c"]
         # strip witness if not present
         for token in return_dict["t"]:
             for proof in token["p"]:
@@ -1099,13 +1108,16 @@ class TokenV4(Token):
         # optional memo
         if self.d:
             return_dict.update(dict(d=self.d))
+        # optional cumulative unblinded signatures
+        if self.ct:
+            return_dict.update(dict(ct=self.ct))
         # mint
         return_dict.update(dict(m=self.m))
         # unit
         return_dict.update(dict(u=self.u))
         return return_dict
 
-    def serialize(self, include_dleq=False) -> str:
+    def serialize(self, include_dleq=False, strip_C=False) -> str:
         """
         Takes a TokenV4 and serializes it as "cashuB<cbor_urlsafe_base64>.
         """
@@ -1113,7 +1125,7 @@ class TokenV4(Token):
         tokenv4_serialized = prefix
         # encode the token as a base64 string
         tokenv4_serialized += base64.urlsafe_b64encode(
-            cbor2.dumps(self.serialize_to_dict(include_dleq))
+            cbor2.dumps(self.serialize_to_dict(include_dleq, strip_C))
         ).decode()
         # remove padding
         tokenv4_serialized = tokenv4_serialized.rstrip("=")
@@ -1133,7 +1145,9 @@ class TokenV4(Token):
         token_base64 += "=" * (4 - len(token_base64) % 4)
 
         token = cbor2.loads(base64.urlsafe_b64decode(token_base64))
-        return cls.parse_obj(token)
+        token = cls.parse_obj(token)
+        logger.debug(f"{token = }")
+        return token
 
     def to_tokenv3(self) -> TokenV3:
         tokenv3 = TokenV3(_memo=self.d, _unit=self.u)
@@ -1171,4 +1185,5 @@ class TokenV4(Token):
             u=token_dict["u"],
             t=[TokenV4Token(**t) for t in token_dict["t"]],
             d=token_dict.get("d", None),
+            ct=token_dict.get("ct", None),
         )

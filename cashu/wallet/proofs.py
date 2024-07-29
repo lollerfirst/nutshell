@@ -2,6 +2,7 @@ from itertools import groupby
 from typing import Dict, List, Optional, Tuple
 
 from loguru import logger
+from secp256k1 import PublicKey
 
 from ..core.base import (
     Proof,
@@ -134,6 +135,7 @@ class WalletProofs(SupportsDb, SupportsKeysets):
         proofs: List[Proof],
         include_dleq=False,
         legacy=False,
+        aggregate_proofs=False,
         memo: Optional[str] = None,
     ) -> str:
         """Produces sharable token with proofs and mint information.
@@ -144,6 +146,9 @@ class WalletProofs(SupportsDb, SupportsKeysets):
         Returns:
             str: Serialized Cashu token
         """
+        if include_dleq and aggregate_proofs:
+            raise Exception("Cannot include DLEQ in a aggregate token")
+
         # DEPRECATED: legacy token for base64 keysets
         try:
             _ = [bytes.fromhex(p.id) for p in proofs]
@@ -155,8 +160,8 @@ class WalletProofs(SupportsDb, SupportsKeysets):
             tokenv3 = await self._make_tokenv3(proofs, memo)
             return tokenv3.serialize(include_dleq)
         else:
-            tokenv4 = await self._make_token(proofs, include_dleq, memo)
-            return tokenv4.serialize(include_dleq)
+            tokenv4 = await self._make_token(proofs, include_dleq, memo, aggregate_proofs)
+            return tokenv4.serialize(include_dleq, aggregate_proofs)
 
     async def _make_tokenv3(
         self, proofs: List[Proof], memo: Optional[str] = None
@@ -195,9 +200,24 @@ class WalletProofs(SupportsDb, SupportsKeysets):
             token.token.append(TokenV3Token(mint=url, proofs=mint_proofs))
 
         return token
+    
+    async def get_aggregate_C(self, proofs: List[Proof], previous: Optional[str]) -> bytes:
+        assert proofs[0].C
+        C_tot = PublicKey(bytes.fromhex(proofs[0].C), raw=True)
+        if len(proofs) > 1:
+            for p in proofs[1:]:
+                assert p.C
+                C_tot += PublicKey(bytes.fromhex(p.C), raw=True)
+        if previous:
+            P = PublicKey(bytes.fromhex(previous), raw=True)
+            return (C_tot+P).serialize()
+        return C_tot.serialize()
 
     async def _make_tokenv4(
-        self, proofs: List[Proof], include_dleq=False, memo: Optional[str] = None
+        self, proofs: List[Proof],
+        include_dleq=False,
+        memo: Optional[str] = None,
+        aggregate_proofs=False,
     ) -> TokenV4:
         """
         Takes a list of proofs and returns a TokenV4
@@ -230,18 +250,21 @@ class WalletProofs(SupportsDb, SupportsKeysets):
         unit_str = keysets[0].unit.name
 
         tokens: List[TokenV4Token] = []
+        ct = None
         for keyset_id in keyset_ids:
             proofs_keyset = [p for p in proofs if p.id == keyset_id]
             tokenv4_proofs = []
             for proof in proofs_keyset:
                 tokenv4_proofs.append(TokenV4Proof.from_proof(proof, include_dleq))
+            if aggregate_proofs:
+                ct = await self.get_aggregate_C(proofs_keyset, ct)
             tokenv4_token = TokenV4Token(i=bytes.fromhex(keyset_id), p=tokenv4_proofs)
             tokens.append(tokenv4_token)
 
-        return TokenV4(m=mint_url, u=unit_str, t=tokens, d=memo)
+        return TokenV4(m=mint_url, u=unit_str, t=tokens, d=memo, ct=ct)
 
     async def _make_token(
-        self, proofs: List[Proof], include_dleq=False, memo: Optional[str] = None
+        self, proofs: List[Proof], include_dleq=False, memo: Optional[str] = None, aggregate_proofs=False,
     ) -> TokenV4:
         """
         Takes a list of proofs and returns a TokenV4
@@ -253,4 +276,4 @@ class WalletProofs(SupportsDb, SupportsKeysets):
             TokenV4: TokenV4 object
         """
 
-        return await self._make_tokenv4(proofs, include_dleq, memo)
+        return await self._make_tokenv4(proofs, include_dleq, memo, aggregate_proofs)

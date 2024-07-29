@@ -67,7 +67,7 @@ async def redeem_TokenV4(wallet: Wallet, token: TokenV4) -> Wallet:
     Redeem a token with a single mint.
     """
     await wallet.load_mint()
-    proofs_to_keep, _ = await wallet.redeem(token.proofs)
+    proofs_to_keep, _ = await wallet.redeem(token.proofs, token.ct)
     print(f"Received {wallet.unit.str(sum_proofs(proofs_to_keep))}")
     return wallet
 
@@ -117,6 +117,7 @@ async def send(
     include_fees: bool = False,
     memo: Optional[str] = None,
     force_swap: bool = False,
+    aggregate_proofs: bool = False,
 ):
     """
     Prints token to send to stdout.
@@ -162,7 +163,7 @@ async def send(
         )
 
     token = await wallet.serialize_proofs(
-        send_proofs, include_dleq=include_dleq, legacy=legacy, memo=memo
+        send_proofs, include_dleq=include_dleq, legacy=legacy, memo=memo, aggregate_proofs=aggregate_proofs
     )
 
     print(token)

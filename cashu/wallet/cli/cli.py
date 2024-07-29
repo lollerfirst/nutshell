@@ -556,6 +556,14 @@ async def balance(ctx: Context, verbose):
     help="Force swap token.",
     type=bool,
 )
+@click.option(
+    "--aggregate-proofs",
+    "-g",
+    default=False,
+    is_flag=True,
+    help="Create a shorter token by summing up blind signatures.",
+    type=bool,
+)
 @click.pass_context
 @coro
 async def send_command(
@@ -571,6 +579,7 @@ async def send_command(
     offline: bool,
     include_fees: bool,
     force_swap: bool,
+    aggregate_proofs: bool,
 ):
     wallet: Wallet = ctx.obj["WALLET"]
     amount = int(amount * 100) if wallet.unit in [Unit.usd, Unit.eur] else int(amount)
@@ -585,6 +594,7 @@ async def send_command(
             include_fees=include_fees,
             memo=memo,
             force_swap=force_swap,
+            aggregate_proofs=aggregate_proofs,
         )
     else:
         await send_nostr(wallet, amount=amount, pubkey=nostr, verbose=verbose, yes=yes)

@@ -39,6 +39,7 @@ from ..core.models import (
     PostMintRequest,
     PostMintResponse,
     PostRestoreResponse,
+    PostSwapOptions,
     PostSwapRequest,
     PostSwapResponse,
 )
@@ -462,10 +463,17 @@ class LedgerAPI(LedgerAPIDeprecated, object):
         self,
         proofs: List[Proof],
         outputs: List[BlindedMessage],
+        C_tot: Optional[str],
     ) -> List[BlindedSignature]:
         """Consume proofs and create new promises based on amount split."""
         logger.debug("Calling split. POST /v1/swap")
-        split_payload = PostSwapRequest(inputs=proofs, outputs=outputs)
+        split_payload = PostSwapRequest(
+            inputs=proofs,
+            outputs=outputs,
+            options=PostSwapOptions(
+                C_tot=C_tot
+            ) if C_tot else None
+        )
 
         # construct payload
         def _splitrequest_include_fields(proofs: List[Proof]):
@@ -480,6 +488,7 @@ class LedgerAPI(LedgerAPIDeprecated, object):
             return {
                 "outputs": ...,
                 "inputs": {i: proofs_include for i in range(len(proofs))},
+                "options": ...,
             }
 
         resp = await self.httpx.post(
