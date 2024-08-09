@@ -59,10 +59,11 @@ class MintSettings(CashuSettings):
 
     mint_database: str = Field(default="data/mint")
     mint_test_database: str = Field(default="test_data/test_mint")
+    mint_test_bloom_filter: str = Field(default="test_data/test_mint")
     mint_max_secret_length: int = Field(default=512)
 
     mint_input_fee_ppk: int = Field(default=0)
-
+    mint_bloom_filter: str = Field(default="data/mint")
 
 class MintBackends(MintSettings):
     mint_lightning_backend: str = Field(default="")  # deprecated

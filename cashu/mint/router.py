@@ -11,6 +11,8 @@ from ..core.models import (
     KeysResponse,
     KeysResponseKeyset,
     MintInfoContact,
+    PostCheckRequest,
+    PostCheckResponse,
     PostCheckStateRequest,
     PostCheckStateResponse,
     PostMeltQuoteRequest,
@@ -375,3 +377,17 @@ async def restore(payload: PostRestoreRequest) -> PostRestoreResponse:
     assert payload.outputs, Exception("no outputs provided.")
     outputs, signatures = await ledger.restore(payload.outputs)
     return PostRestoreResponse(outputs=outputs, signatures=signatures)
+
+@router.post(
+    "/v1/check",
+    name="Check",
+    summary="returns Bloom filter entries at the provided indices. Used for checking spent secrets.",
+    response_model=PostCheckResponse,
+    response_description=(
+        "A list of tuples containing the queried indices in the first position, "
+        "and the truth values in the second position."
+    ),
+)
+async def check(payload: PostCheckRequest) -> PostCheckResponse:
+    assert len(payload.indices) > 0, Exception("no indices provided.")
+    return await ledger.check_indices(payload)

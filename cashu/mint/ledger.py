@@ -21,6 +21,7 @@ from ..core.base import (
     ProofState,
     Unit,
 )
+from ..core.bloom import SlidingBloomFilter
 from ..core.crypto import b_dhke
 from ..core.crypto.aes import AESCipher
 from ..core.crypto.keys import (
@@ -40,6 +41,8 @@ from ..core.errors import (
 )
 from ..core.helpers import sum_proofs
 from ..core.models import (
+    PostCheckRequest,
+    PostCheckResponse,
     PostMeltQuoteRequest,
     PostMeltQuoteResponse,
     PostMintQuoteRequest,
@@ -101,6 +104,7 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
         self.pubkey = derive_pubkey(self.seed)
         self.db_read = DbReadHelper(self.db, self.crud)
         self.db_write = DbWriteHelper(self.db, self.crud, self.events, self.db_read)
+        self.bloomf = SlidingBloomFilter()
 
     # ------- STARTUP -------
 
@@ -938,6 +942,7 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
 
             # melt successful, invalidate proofs
             await self._invalidate_proofs(proofs=proofs, quote_id=melt_quote.quote)
+            await self.bloomf.add_elements([p.secret for p in proofs])
 
             # prepare change to compensate wallet for overpaid fees
             return_promises: List[BlindedSignature] = []
@@ -999,6 +1004,7 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
             # delete proofs from pending list
             await self.db_write._unset_proofs_pending(proofs)
 
+        await self.bloomf.add_elements([p.secret for p in proofs])
         logger.trace("swap successful")
         return promises
 
@@ -1086,3 +1092,7 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
                 )
                 signatures.append(signature)
             return signatures
+
+    async def check_indices(self, request: PostCheckRequest) -> PostCheckResponse:
+        result = await self.bloomf.get_values(request.indices)
+        return PostCheckResponse(result=result)

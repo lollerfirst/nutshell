@@ -41,6 +41,7 @@ assert (
     settings.mint_test_database != settings.mint_database
 ), "Test database is the same as the main database"
 settings.mint_database = settings.mint_test_database
+settings.mint_bloom_filter = settings.mint_test_bloom_filter
 settings.mint_derivation_path = "m/0'/0'/0'"
 settings.mint_derivation_path_list = []
 settings.mint_private_key = "TEST_PRIVATE_KEY"

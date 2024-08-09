@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from pydantic import BaseModel, Field, root_validator
 
@@ -324,3 +324,11 @@ class PostRestoreResponse(BaseModel):
     def __init__(self, **data):
         super().__init__(**data)
         self.promises = self.signatures
+
+# ------- API: CHECK -------
+
+class PostCheckRequest(BaseModel):
+    indices: List[int] = []
+
+class PostCheckResponse(BaseModel):
+    result: List[Tuple[int, int]] = []
