@@ -1,7 +1,7 @@
 import asyncio
 import os
 import pickle
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 import mmh3
 from bitarray import bitarray
@@ -9,6 +9,14 @@ from loguru import logger
 
 from .settings import settings
 
+async def get_k_indices(element: str, k: int, m: int = 2**32) -> List[int]:
+    indices = []
+    for seed in range(k):
+        # CAN WE RELY ON MURMURHASH DIFFUSION?
+        index = mmh3.hash(element, seed, signed=False)  # returns a unsigned 32-bits number. More than enough for out purposes.
+        index %= m
+        indices.append(index)
+    return indices
 
 # https://hur.st/bloomfilter/?n=1000000&p=&m=67095409&k=47
 class SlidingBloomFilter:
@@ -82,30 +90,23 @@ class SlidingBloomFilter:
                 logger.debug("Releasing lock...")
             await asyncio.sleep(2)
 
-    async def get_values(self, indices: List[int]) -> List[Tuple[int, int]]:
-        assert all([0 <= i < self.m for i in indices]), "Some indices are not within range"
-        result = []
+    async def get_values(self, indices: List[int]) -> Dict[int, int]:
+        assert all([i >= 0 for i in indices]), "Some indices are negative"
+        result = {}
         async with self.lock:
             for i in indices:
-                result.append((i, self.filter_curr[i] | self.filter_old[i]))
+                i %= self.m
+                result[i] = self.filter_curr[i] | self.filter_old[i]
+                logger.debug(f"{self.filter_curr[i] = } {i = }")
         return result
-
-    async def get_k_indices(self, element: str) -> List[int]:
-        indices = []
-        for seed in range(self.k):
-            # CAN WE RELY ON MURMURHASH DIFFUSION?
-            index = mmh3.hash(element, seed, signed=False)  # returns a unsigned 32-bits number. More than enough for out purposes.
-            index %= self.m
-            logger.debug(f"mmh3 index: {index}")
-            indices.append(index)
-        return indices
 
     async def add_elements(self, elements: List[str]) -> None:
         async with self.lock:
             for el in elements:
-                indices = await self.get_k_indices(el)
+                indices = await get_k_indices(el, self.k, self.m)
                 for index in indices:
                     self.filter_curr[index] = 1
+                    logger.debug(f"{self.filter_curr[index] = } {index = }")
             self.i += len(elements)
             self.elements_added = True
         logger.info(f"Inserted {len(elements)} elements in the filter")

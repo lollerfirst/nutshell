@@ -331,4 +331,4 @@ class PostCheckRequest(BaseModel):
     indices: List[int] = []
 
 class PostCheckResponse(BaseModel):
-    result: List[Tuple[int, int]] = []
+    result: Dict[int, int] = {}
