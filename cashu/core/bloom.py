@@ -36,18 +36,25 @@ class SlidingBloomFilter:
         self.filter_curr_path = os.path.join(filter_path, 'mint.filter.current')
 
         if os.path.exists(self.filter_old_path):
-            with open(self.filter_old_path, 'rb') as f:
-                self.filter_old = pickle.load(f)
-            assert len(self.filter_old) == self.m, f"Something is terribly wrong with old Bloom filter: {len(self.filter_old) = } {self.m = }"
+            try:
+                with open(self.filter_old_path, 'rb') as f:
+                    self.filter_old = pickle.load(f)
+            except Exception as e:
+                logger.error(f"Error loading old filter: {str(e)}")
+                raise e
         else:
             self.filter_old = bitarray(self.m)
             with open(self.filter_old_path, 'wb') as f:
                 pickle.dump(self.filter_old, f)
 
         if os.path.exists(self.filter_curr_path):
-            with open(self.filter_curr_path, 'rb') as f:
-                self.filter_curr = pickle.load(f)
-            assert len(self.filter_curr) == self.m, f"Something is terribly wrong with current Bloom filter: {len(self.filter_curr) = } {self.m = }"
+            try:
+                with open(self.filter_curr_path, 'rb') as f:
+                    self.filter_curr = pickle.load(f)
+                    logger.debug(f"{type(self.filter_curr) = }")
+            except Exception as e:
+                logger.error(f"Error loading current filter: {str(e)}")
+                raise e
         else:
             self.filter_curr = bitarray(self.m)
             with open(self.filter_curr_path, 'wb') as f:
@@ -60,12 +67,8 @@ class SlidingBloomFilter:
         self.persist_task = asyncio.create_task(self.persist())
         #self.shutdown_event = asyncio.Event()
 
-        logger.info("Sliding Bloom filter correctly initialized :)")
-    '''
-    def __del__(self):
-        # Notify persist we are closing down
-        self.shutdown_event.set()
-    '''
+        logger.info("Sliding Bloom filter correctly initialized")
+        
     async def persist(self):
         while True:
             logger.debug("I am awake")

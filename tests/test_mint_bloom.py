@@ -59,19 +59,19 @@ async def test_filter_sliding(ledger: Ledger):
 @pytest.mark.asyncio
 async def test_mint_melt_check(wallet: Wallet, ledger: Ledger):
     if is_regtest:
-        pytest.skip("Can't run this")
+        pytest.skip("")
 
     # Alice (Mints and sends to Bob)
-    invoice = await wallet.request_mint(1024)
+    invoice = await wallet.request_mint(10)
     await pay_if_regtest(invoice.bolt11)
-    proofs = await wallet.mint(1024, id=invoice.id)
+    proofs = await wallet.mint(10, id=invoice.id)
 
     # Bob (redeems)
     payment_request = (
-    "lnbc10u1pjap7phpp50s9lzr3477j0tvacpfy2ucrs4q0q6cvn232ex7nt2zqxxxj8gxrsdpv2phhwetjv4jzqcneypqyc6t8dp6xu6twva2xjuzzda6qcqzzsxqrrsss"
-    "p575z0n39w2j7zgnpqtdlrgz9rycner4eptjm3lz363dzylnrm3h4s9qyyssqfz8jglcshnlcf0zkw4qu8fyr564lg59x5al724kms3h6gpuhx9xrfv27tgx3l3u3cyf6"
-    "3r52u0xmac6max8mdupghfzh84t4hfsvrfsqwnuszf"
-    )  # 1000 sat
+        "lnbc10n1pjaxujrpp5sqehn6h5p8xpa0c0lvj5vy3a537gxfk5e7h2ate2alfw3y5cm6xqdpv2phhwetjv4jzqcneypqyc6t8dp6xu6twva2xjuzzda6qcqzzsxqrrsss"
+        "p5fkxsvyl0r32mvnhv9cws4rp986v0wjl2lp93zzl8jejnuwzvpynq9qyyssqqmsnatsz87qrgls98c97dfa6l2z3rzg2x6kxmrvpz886rwjylmd56y3qxzfulrq03kkh"
+        "hwk6r32wes6pjt2zykhnsjn30c6uhuk0wugp3x74al"
+    ) # 1 sat
     quote = await wallet.melt_quote(payment_request)
     status = await wallet.melt(proofs, payment_request, 0, quote.quote)
     assert status.paid and status.paid == True
@@ -90,6 +90,4 @@ async def test_mint_melt_check(wallet: Wallet, ledger: Ledger):
     # request mint
     result = await ledger.check_indices(PostCheckRequest(indices=send_indices))
     assert len(result.result.items()) > 0, "Empty resultset"
-    logger.debug(f"{result = }")
-    logger.debug(f"{indices = }")
     assert all([result.result[index] == 1 for index in indices])
