@@ -62,6 +62,8 @@ class MintSettings(CashuSettings):
     mint_max_secret_length: int = Field(default=512)
 
     mint_input_fee_ppk: int = Field(default=0)
+    mint_nostr_relays: Optional[List[str]] = Field(default=None)
+    mint_nostr_name: Optional[str] = Field(default=None)
 
 
 class MintBackends(MintSettings):

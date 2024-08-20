@@ -60,6 +60,7 @@ from .events.events import LedgerEventManager
 from .features import LedgerFeatures
 from .tasks import LedgerTasks
 from .verification import LedgerVerification
+from .publisher import MintEvent
 
 
 class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFeatures):
@@ -101,6 +102,8 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
         self.pubkey = derive_pubkey(self.seed)
         self.db_read = DbReadHelper(self.db, self.crud)
         self.db_write = DbWriteHelper(self.db, self.crud, self.events, self.db_read)
+        self.epoch = int(derivation_path.split("/")[-1].strip("'"))
+        logger.debug(f"epoch: {self.epoch}")
 
     # ------- STARTUP -------
 
@@ -108,6 +111,7 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
         await self._startup_ledger()
         await self._check_pending_proofs_and_melt_quotes()
         self.invoice_listener_tasks = await self.dispatch_listeners()
+        self.publisher_task = await self.dispatch_publisher()
 
     async def _startup_ledger(self):
         await self.init_keysets()
@@ -137,6 +141,7 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
         await self.db.engine.dispose()
         for task in self.invoice_listener_tasks:
             task.cancel()
+        self.publisher_task.cancel()
 
     async def _check_pending_proofs_and_melt_quotes(self):
         """Startup routine that checks all pending proofs for their melt state and either invalidates
@@ -553,6 +558,9 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
         await self.db_write._unset_mint_quote_pending(
             quote_id=quote_id, state=MintQuoteState.issued
         )
+        
+        # Publish blinded messages
+        await self.nostr.add_event(self.epoch, MintEvent.MINT, promises)
 
         return promises
 
@@ -960,6 +968,11 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
         finally:
             # delete proofs from pending list
             await self.db_write._unset_proofs_pending(proofs)
+            
+        # Publish burnt proofs
+        await self.nostr.add_event(self.epoch, MintEvent.BURN, proofs)
+        if melt_quote.change:
+            await self.nostr.add_event(self.epoch, MintEvent.MINT, melt_quote.change)
 
         return PostMeltQuoteResponse.from_melt_quote(melt_quote)
 
@@ -998,6 +1011,10 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
         finally:
             # delete proofs from pending list
             await self.db_write._unset_proofs_pending(proofs)
+
+        # Publish burnt proofs
+        await self.nostr.add_event(self.epoch, MintEvent.BURN, proofs)
+        await self.nostr.add_event(self.epoch, MintEvent.MINT, promises)
 
         logger.trace("swap successful")
         return promises

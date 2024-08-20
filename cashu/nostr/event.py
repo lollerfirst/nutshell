@@ -16,6 +16,7 @@ class EventKind(IntEnum):
     CONTACTS = 3
     ENCRYPTED_DIRECT_MESSAGE = 4
     DELETE = 5
+    APPLICATION_SPECIFIC_DATA = 30078
 
 
 @dataclass

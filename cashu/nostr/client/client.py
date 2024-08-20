@@ -4,6 +4,7 @@ import time
 import json
 import os
 import base64
+import time
 
 from ..event import Event
 from ..relay_manager import RelayManager
@@ -61,8 +62,8 @@ class NostrClient:
             self.private_key = PrivateKey()  # generate random key
         self.public_key = self.private_key.public_key
 
-    def post(self, message: str):
-        event = Event(message, self.public_key.hex(), kind=EventKind.TEXT_NOTE)
+    def post(self, message: str, kind: EventKind = EventKind.TEXT_NOTE):
+        event = Event(message, self.public_key.hex(), created_at=int(time.time()), kind=kind)
         self.private_key.sign_event(event)
         event_json = event.to_message()
         # print("Publishing message:")

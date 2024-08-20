@@ -9,6 +9,7 @@ from ..lightning.base import LightningBackend
 from ..mint.crud import LedgerCrud
 from .events.events import LedgerEventManager
 from .protocols import SupportsBackends, SupportsDb, SupportsEvents
+from .publisher import NostrEventPublisher
 
 
 class LedgerTasks(SupportsDb, SupportsBackends, SupportsEvents):
@@ -16,6 +17,7 @@ class LedgerTasks(SupportsDb, SupportsBackends, SupportsEvents):
     db: Database
     crud: LedgerCrud
     events: LedgerEventManager
+    nostr: NostrEventPublisher = NostrEventPublisher()
 
     async def dispatch_listeners(self) -> List[asyncio.Task]:
         tasks = []
@@ -26,6 +28,10 @@ class LedgerTasks(SupportsDb, SupportsBackends, SupportsEvents):
                 )
                 tasks.append(asyncio.create_task(self.invoice_listener(backend)))
         return tasks
+    
+    async def dispatch_publisher(self) -> asyncio.Task:
+        logger.debug("Dispatching Nostr publisher")
+        return asyncio.create_task(self.nostr.publisher())
 
     async def invoice_listener(self, backend: LightningBackend) -> None:
         if backend.supports_incoming_payment_stream:
