@@ -17,7 +17,7 @@ class LedgerTasks(SupportsDb, SupportsBackends, SupportsEvents):
     db: Database
     crud: LedgerCrud
     events: LedgerEventManager
-    nostr: NostrEventPublisher = NostrEventPublisher()
+    nostr: NostrEventPublisher
 
     async def dispatch_listeners(self) -> List[asyncio.Task]:
         tasks = []

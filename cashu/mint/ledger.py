@@ -43,6 +43,8 @@ from ..core.models import (
     PostMeltQuoteRequest,
     PostMeltQuoteResponse,
     PostMintQuoteRequest,
+    MintInfoContact,
+    GetInfoResponse,
 )
 from ..core.settings import settings
 from ..core.split import amount_split
@@ -60,7 +62,7 @@ from .events.events import LedgerEventManager
 from .features import LedgerFeatures
 from .tasks import LedgerTasks
 from .verification import LedgerVerification
-from .publisher import MintEvent
+from .publisher import MintEvent, NostrEventPublisher
 
 
 class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFeatures):
@@ -104,6 +106,24 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
         self.db_write = DbWriteHelper(self.db, self.crud, self.events, self.db_read)
         self.epoch = int(derivation_path.split("/")[-1].strip("'"))
         logger.debug(f"epoch: {self.epoch}")
+        
+        mint_features = self.mint_features()
+        contact_info = [
+            MintInfoContact(method=m, info=i)
+            for m, i in settings.mint_info_contact
+            if m and i
+        ]
+        info = GetInfoResponse(
+            name=settings.mint_info_name,
+            pubkey=self.pubkey.serialize().hex() if self.pubkey else None,
+            version=f"Nutshell/{settings.version}",
+            description=settings.mint_info_description,
+            description_long=settings.mint_info_description_long,
+            contact=contact_info,
+            nuts=mint_features,
+            motd=settings.mint_info_motd,
+        )
+        self.nostr = NostrEventPublisher(info)
 
     # ------- STARTUP -------
 
@@ -560,7 +580,11 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
         )
         
         # Publish blinded messages
-        await self.nostr.add_event(self.epoch, MintEvent.MINT, promises)
+        await self.nostr.add_event(
+            self.epoch,
+            MintEvent.MINT,
+            list(zip(promises, outputs))
+        )
 
         return promises
 
@@ -971,8 +995,8 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
             
         # Publish burnt proofs
         await self.nostr.add_event(self.epoch, MintEvent.BURN, proofs)
-        if melt_quote.change:
-            await self.nostr.add_event(self.epoch, MintEvent.MINT, melt_quote.change)
+        if melt_quote.change and outputs:
+            await self.nostr.add_event(self.epoch, MintEvent.MINT, list(zip(melt_quote.change, outputs)))
 
         return PostMeltQuoteResponse.from_melt_quote(melt_quote)
 
@@ -1014,7 +1038,7 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
 
         # Publish burnt proofs
         await self.nostr.add_event(self.epoch, MintEvent.BURN, proofs)
-        await self.nostr.add_event(self.epoch, MintEvent.MINT, promises)
+        await self.nostr.add_event(self.epoch, MintEvent.MINT, list(zip(promises, outputs)))
 
         logger.trace("swap successful")
         return promises
