@@ -59,6 +59,7 @@ class NostrEventPublisher:
     async def add_event(
         self,
         epoch: int,
+        unit: str,
         mint_event: MintEvent,
         contents: Union[List[Tuple[BlindedSignature, BlindedMessage]], List[Proof]]
     ):
@@ -85,5 +86,6 @@ class NostrEventPublisher:
                 'epoch': epoch,
                 'event': mint_event.name,
                 'contents': data,
+                'unit': unit,
             })
             logger.info(f"Added {mint_event.name} event with {len(contents)} contents for epoch {epoch}")

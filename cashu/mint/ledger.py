@@ -582,6 +582,7 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
         # Publish blinded messages
         await self.nostr.add_event(
             self.epoch,
+            str(output_unit),
             MintEvent.MINT,
             list(zip(promises, outputs))
         )
@@ -994,9 +995,19 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
             await self.db_write._unset_proofs_pending(proofs)
             
         # Publish burnt proofs
-        await self.nostr.add_event(self.epoch, MintEvent.BURN, proofs)
+        await self.nostr.add_event(
+            self.epoch,
+            str(melt_quote.unit),
+            MintEvent.BURN,
+            proofs
+        )
         if melt_quote.change and outputs:
-            await self.nostr.add_event(self.epoch, MintEvent.MINT, list(zip(melt_quote.change, outputs)))
+            await self.nostr.add_event(
+                self.epoch,
+                str(melt_quote.unit),
+                MintEvent.MINT,
+                list(zip(melt_quote.change, outputs))
+            )
 
         return PostMeltQuoteResponse.from_melt_quote(melt_quote)
 
@@ -1037,8 +1048,9 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
             await self.db_write._unset_proofs_pending(proofs)
 
         # Publish burnt proofs
-        await self.nostr.add_event(self.epoch, MintEvent.BURN, proofs)
-        await self.nostr.add_event(self.epoch, MintEvent.MINT, list(zip(promises, outputs)))
+        unit = self.keysets[proofs[0].id].unit
+        await self.nostr.add_event(self.epoch, str(unit), MintEvent.BURN, proofs)
+        await self.nostr.add_event(self.epoch, str(unit), MintEvent.MINT, list(zip(promises, outputs)))
 
         logger.trace("swap successful")
         return promises
