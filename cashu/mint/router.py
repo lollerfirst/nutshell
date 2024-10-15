@@ -379,15 +379,15 @@ async def restore(payload: PostRestoreRequest) -> PostRestoreResponse:
     return PostRestoreResponse(outputs=outputs, signatures=signatures)
 
 @router.post(
-    "/v1/check",
-    name="Check",
-    summary="returns Bloom filter entries at the provided indices. Used for checking spent secrets.",
-    response_model=PostCheckResponse,
+    "/v1/bloom",
+    name="Bloom Filter",
+    summary="returns combined Bloom Filter",
+    response_model=PostBloomResponse,
     response_description=(
-        "A list of tuples containing the queried indices in the first position, "
-        "and the truth values in the second position."
+        "two bit arrays reprenting the current and old filter"
     ),
 )
-async def check(payload: PostCheckRequest) -> PostCheckResponse:
-    assert len(payload.indices) > 0, Exception("no indices provided.")
-    return await ledger.check_indices(payload)
+@limiter.limit(f"{settings.mint_transaction_rate_limit_per_minute}/minute")
+async def bloom() -> PostBloomResponse:
+    combined_filter = await ledger.get_bloom_filter()
+    return PostBloomResponse(combined_filter)

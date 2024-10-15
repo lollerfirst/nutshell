@@ -1093,6 +1093,5 @@ class Ledger(LedgerVerification, LedgerSpendingConditions, LedgerTasks, LedgerFe
                 signatures.append(signature)
             return signatures
 
-    async def check_indices(self, request: PostCheckRequest) -> PostCheckResponse:
-        result = await self.bloomf.get_values(request.indices)
-        return PostCheckResponse(result=result)
+    async def get_bloom_filter() -> List[bool]:
+        return await self.bloomf.get_combined_filter()

@@ -18,16 +18,30 @@ async def get_k_indices(element: str, k: int, m: int = 2**32) -> List[int]:
         indices.append(index)
     return indices
 
-# https://hur.st/bloomfilter/?n=1000000&p=&m=67095409&k=47
+async def contains(filter: bitarray, indices: List[int]):
+    assert all([i >= 0 for i in indices]), "Some indices are negative"
+    result = []
+    async with self.lock:
+        for i in indices:
+            i %= self.m
+            result[i] = all([self.filter_curr[i%m] | self.filter_old[i%m] for i in indices])
+            logger.debug(f"{self.filter_curr[i] = } {i = }")
+    return result
+
+# https://hur.st/bloomfilter/?n=1000&p=1.0E-3&m=&k=
 class SlidingBloomFilter:
-    m: int = 67095409           # number of bits for one filter
-    n: int = (1000000 // 2)     # number of maximum allowed elements for one filter
+    m: int = 14378              # number of bits for one filter (1.7 KB)
+    n: int = (1000 // 2)        # number of maximum allowed elements for one filter
     i: int = 0                  # enumeration of the next element to be added
-    k: int = 47                 # number of hash functions
+    k: int = 10                 # number of hash functions
     elements_added: bool = False
-    # FPR ~= 1E-14 --> we OR the truth values of old filter with current filter, which effectively
+    # FPR ~= 1e-3 --> we OR the truth values of old filter with current filter, which effectively
     # makes it as if the current filter already had `n` entries. Therefore, we halve the number of entries
     # we are allowed to insert to keep the FPR the same.
+    # ==================================================
+    # FPR is high for 1 proof token but if the wallet checks against multiple
+    # tokens HE KNOWS have to be swapped together, the probability of
+    # all of them being false positives becomes: FPR^l = 10^(-3*l)
 
     def __init__(self):
         filter_path = settings.mint_bloom_filter
@@ -93,6 +107,7 @@ class SlidingBloomFilter:
                 logger.debug("Releasing lock...")
             await asyncio.sleep(2)
 
+    '''
     async def get_values(self, indices: List[int]) -> Dict[int, int]:
         assert all([i >= 0 for i in indices]), "Some indices are negative"
         result = {}
@@ -102,6 +117,7 @@ class SlidingBloomFilter:
                 result[i] = self.filter_curr[i] | self.filter_old[i]
                 logger.debug(f"{self.filter_curr[i] = } {i = }")
         return result
+    '''
 
     async def add_elements(self, elements: List[str]) -> None:
         async with self.lock:
@@ -113,3 +129,10 @@ class SlidingBloomFilter:
             self.i += len(elements)
             self.elements_added = True
         logger.info(f"Inserted {len(elements)} elements in the filter")
+
+    async def get_combined_filter(self) -> List[bool]:
+        result: List[bool] = []
+        async with self.lock:
+            logger.debug("Lock Acquired")
+            result = [(curr|old) for curr, old in zip(self.filter_curr, self.filter_old)]
+        return result

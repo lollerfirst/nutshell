@@ -325,10 +325,7 @@ class PostRestoreResponse(BaseModel):
         super().__init__(**data)
         self.promises = self.signatures
 
-# ------- API: CHECK -------
+# ------- API: BLOOM ------
 
-class PostCheckRequest(BaseModel):
-    indices: List[int] = []
-
-class PostCheckResponse(BaseModel):
-    result: Dict[int, int] = {}
+class PostBloomResponse(BaseModel):
+    filter: List[bool] = []
