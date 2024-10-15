@@ -43,19 +43,16 @@ async def test_add_and_check(ledger: Ledger):
     response = await ledger.check_indices(PostCheckRequest(indices=test_indices))
     assert all([v == 1 for v in response.result.values()])
 
-
 @pytest.mark.asyncio
 async def test_filter_sliding(ledger: Ledger):
     bloomf = ledger.bloomf
-    bloomf.i = 500000-1
+    bloomf.i = bloomf.n-1
     secret = "testing"
     await bloomf.add_elements([secret])
     await asyncio.sleep(2)
     assert bloomf.i == 0
-    response = await ledger.check_indices(PostCheckRequest(indices=test_indices))
-    assert all([v == 1 for v in response.result.values()])
-
-
+    assert all([b == 0 for b in bloomf.filter_curr])
+    
 @pytest.mark.asyncio
 async def test_mint_melt_check(wallet: Wallet, ledger: Ledger):
     if is_regtest:
