@@ -1165,29 +1165,7 @@ class Ledger(
             PostGetFilterResponse: The response containing the filter.
         """
         # Retrieve the spent ecash filter for the desired filter
-        gcs_and_timestamp = await self.crud.get_filter(filters_table="spent_filters", keyset_id=keyset_id, db=self.db)
-
-        if not gcs_and_timestamp:
-            raise Exception("No filter found for the given keyset id.")
-
-        (gcs, timestamp) = gcs_and_timestamp
-        return GetFilterResponse(
-            content=b64encode(gcs.content).decode(),
-            timestamp=timestamp,
-            n=gcs.num_items,
-            m=gcs.inv_fpr,
-            p=gcs.rem_bitlength,
-        )
-
-    async def get_issued_filter_by_keyset(self, keyset_id: str) -> GetFilterResponse:
-        """Retrieves a Golomb-Coded Set filter for the given keyset id.
-        Args:
-            keyset_id (str): The keyset id of the filter.
-        Returns:
-            PostGetFilterResponse: The response containing the filter.
-        """
-        # Retrieve the spent ecash filter for the desired filter
-        gcs_and_timestamp = await self.crud.get_filter(filters_table="issued_filters", keyset_id=keyset_id, db=self.db)
+        gcs_and_timestamp = await self.crud.get_filter(keyset_id=keyset_id, db=self.db)
 
         if not gcs_and_timestamp:
             raise Exception("No filter found for the given keyset id.")

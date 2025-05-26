@@ -983,16 +983,4 @@ async def m028_add_per_keyset_gcs_filters(db: Database):
                 )
             """
         )
-        await conn.execute(
-            f"""
-                CREATE TABLE IF NOT EXISTS {db.table_with_schema('issued_filters')} (
-                    keyset_id TEXT PRIMARY KEY,
-                    content {db.blob} NOT NULL,
-                    num_items INTEGER NOT NULL,
-                    inv_fpr INTEGER NOT NULL,
-                    remainder_bitlength INTEGER NOT NULL,
-                    time TIMESTAMP DEFAULT {db.timestamp_now}
-                )
-            """
-        )
             
