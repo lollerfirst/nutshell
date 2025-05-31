@@ -60,6 +60,14 @@ def derive_keyset_id(keys: Dict[int, PublicKey]):
     pubkeys_concat = b"".join([p.serialize() for _, p in sorted_keys.items()])
     return f"00{hashlib.sha256(pubkeys_concat).hexdigest()[:14]}"
 
+def derive_keyset_id_v2(keys: Dict[int, PublicKey], unit: str, expiry: Optional[int]) -> str:
+    """Deterministic derivation keyset_id from set of public keys, unit and expiry (optional)"""
+    # sort public keys by amount
+    sorted_keys = dict(sorted(keys.items()))
+    pubkeys_concat = b"".join([p.serialize() for _, p in sorted_keys.items()])
+    pubkeys_concat += f"unit:{unit}".encode("utf-8")
+    pubkeys_concat += f"final_expiry:{expiry}".encode("utf-8") if final_expiry else ""
+    return f"01{hashlib.sha256(pubkeys_concat).hexdigest()}"
 
 def derive_keyset_id_deprecated(keys: Dict[int, PublicKey]):
     """DEPRECATED 0.15.0: Deterministic derivation keyset_id from set of public keys.
