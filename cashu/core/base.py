@@ -23,6 +23,7 @@ from .crypto.keys import (
     derive_keys,
     derive_keys_deprecated_pre_0_15,
     derive_keyset_id,
+    derive_keyset_id_v2,
     derive_keyset_id_deprecated,
     derive_pubkeys,
 )
@@ -703,6 +704,9 @@ class Amount:
 class Method(Enum):
     bolt11 = 0
 
+class KeysetVersion(Enum):
+    V1 = 0
+    V2 = 1
 
 class WalletKeyset:
     """
@@ -730,6 +734,8 @@ class WalletKeyset:
         first_seen=None,
         active=True,
         input_fee_ppk=0,
+        # TODO: Change this default to V2 eventually
+        version=KeysetVersion.V1
     ):
         self.valid_from = valid_from
         self.valid_to = valid_to
@@ -737,15 +743,20 @@ class WalletKeyset:
         self.active = active
         self.mint_url = mint_url
         self.input_fee_ppk = input_fee_ppk
+        self.unit = Unit[unit]
 
         self.public_keys = public_keys
         # overwrite id by deriving it from the public keys
         if not id:
-            self.id = derive_keyset_id(self.public_keys)
+            match version:
+                case KeysetVersion.V1:
+                    self.id = derive_keyset_id(self.public_keys)
+                case KeysetVersion.V2:
+                    self.id = derive_keyset_id_v2(self.public_keys, self.unit, valid_to)
+                case _:
+                    raise Error("Unknown keyset version")
         else:
             self.id = id
-
-        self.unit = Unit[unit]
 
         if id and id != self.id:
             logger.warning(
@@ -963,6 +974,7 @@ class MintKeyset:
                 self.seed, self.derivation_path, self.amounts
             )
             self.public_keys = derive_pubkeys(self.private_keys, self.amounts)  # type: ignore
+            # TODO: Change this to `derive_keyset_id_v2` eventually.
             self.id = id_in_db or derive_keyset_id(self.public_keys)  # type: ignore
 
 
