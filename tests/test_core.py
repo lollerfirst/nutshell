@@ -17,7 +17,7 @@ def test_tokenv3_deserialize_get_attributes():
     token_str = "cashuAeyJ0b2tlbiI6IFt7InByb29mcyI6IFt7ImlkIjogIjAwYWQyNjhjNGQxZjU4MjYiLCAiYW1vdW50IjogOCwgInNlY3JldCI6ICJjNTA5YzM4MmM2NjJkYWJiYjRkMGM1ZjllYTI1NjAwZTNhYjViMTIzYWNlNmNiNzljYTM1OWE4NTQwOGZlY2I3IiwgIkMiOiAiMDMwZTNkNDdkM2NlMjNkZTkzNTM3MjQ1NGJjOTMxMTJjZmExN2VmYWNkYjZjNWM2NDNmODVjOGFmM2JlNWQwMWEwIn0sIHsiaWQiOiAiMDBhZDI2OGM0ZDFmNTgyNiIsICJhbW91bnQiOiAyLCAic2VjcmV0IjogIjgxYjhiYjFhN2Q2MGQwZGZiMjkxNmZjZmU4NzUxZmRhZGJjZTU2NDZmMmEyYTQzY2FkMDY4YjUzNzJlN2M5NGMiLCAiQyI6ICIwMzUxN2E0OGYxMmU0NWQ0YzU4ZGUyMTZhNDNjYzgxNDMwMjMxY2YyYjA4OWQzMjY3MDlkMGYyZDAwYjc0N2VmYzcifV0sICJtaW50IjogImh0dHA6Ly9sb2NhbGhvc3Q6MzMzOCJ9XSwgInVuaXQiOiAic2F0In0="
     token = TokenV3.deserialize(token_str)
     assert token.amount == 10
-    assert len(token.proofs) == 2
+    assert len(token.proofs()) == 2
 
 
 def test_tokenv3_deserialize_serialize_with_padding():
@@ -100,7 +100,7 @@ def test_tokenv4_deserialize_get_attributes():
     assert token.amount == 10
     assert token.unit == Unit.sat.name
     assert token.memo is None
-    assert len(token.proofs) == 2
+    assert len(token.proofs()) == 2
 
 
 def test_tokenv4_deserialize_serialize_no_padding():
@@ -118,10 +118,10 @@ def test_tokenv4_deserialize_serialize_with_padding():
 def test_tokenv4_deserialize_with_dleq():
     token_str = "cashuBo2F0gaJhaUgArSaMTR9YJmFwgqRhYQhhc3hAY2I4ZWViZWE3OGRjMTZmMWU4MmY5YTZlOWI4YTU3YTM5ZDM2M2M5MzZkMzBmZTI5YmVlZDI2M2MwOGFkOTY2M2FjWCECRmlA6zYOcRSgigEUDv0BBtC2Ag8x8ZOaZUKo8J2_VWdhZKNhZVggscHmr2oHB_x9Bzhgeg2p9Vbq5Ai23olDz2JbmCRx6dlhc1ggrPmtYrRAgEHnYLIQ83cgyFjAjWNqMeNhUadHMxEm0edhclggQ5c_5bES_NhtzunlDls70fhMDWDgo9DY0kk1GuJGM2ikYWECYXN4QDQxN2E2MjZmNWMyNmVhNjliODM0YTZkZTcxYmZiMGY3ZTQ0NDhlZGFkY2FlNGRmNWVhMzM3NDdmOTVhYjRhYjRhY1ghAwyZ1QstFpNe0sppbduQxiePmGVUUk0mWDj5JAFs74-LYWSjYWVYIPyAzLub_bwc60qFkNfETjig-ESZSR8xdpANy1rHwvHKYXNYIOCInwuipARTL8IFT6NoSJqeeSMjlcbPzL-YSmXjDLIuYXJYIOLk-C0Fhba02B0Ut1BjMQqzxVGaO1NJM9Wi_aDQ37jqYW11aHR0cDovL2xvY2FsaG9zdDozMzM4YXVjc2F0"
     token = TokenV4.deserialize(token_str)
-    assert token.proofs[0].dleq is not None
-    assert token.proofs[0].dleq.e
-    assert token.proofs[0].dleq.s
-    assert token.proofs[0].dleq.r
+    assert token.proofs()[0].dleq is not None
+    assert token.proofs()[0].dleq.e
+    assert token.proofs()[0].dleq.s
+    assert token.proofs()[0].dleq.r
 
     assert token.serialize(include_dleq=True) == token_str
 

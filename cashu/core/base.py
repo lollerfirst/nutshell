@@ -23,8 +23,8 @@ from .crypto.keys import (
     derive_keys,
     derive_keys_deprecated_pre_0_15,
     derive_keyset_id,
-    derive_keyset_id_v2,
     derive_keyset_id_deprecated,
+    derive_keyset_id_v2,
     derive_pubkeys,
 )
 from .crypto.secp import PrivateKey, PublicKey
@@ -752,9 +752,9 @@ class WalletKeyset:
                 case KeysetVersion.V1:
                     self.id = derive_keyset_id(self.public_keys)
                 case KeysetVersion.V2:
-                    self.id = derive_keyset_id_v2(self.public_keys, self.unit, valid_to)
+                    self.id = derive_keyset_id_v2(self.public_keys, str(self.unit), valid_to)
                 case _:
-                    raise Error("Unknown keyset version")
+                    raise Exception("Unknown keyset version")
         else:
             self.id = id
 
@@ -980,11 +980,26 @@ class MintKeyset:
 
 # ------- TOKEN -------
 
+def match_keyset_from_short_id(
+        short_keyset_id: str,
+        known_keysets: Optional[Dict[str, WalletKeyset]]
+    ) -> str:
+        if short_keyset_id[:2] == "00":
+            return short_keyset_id
+        elif short_keyset_id[:2] == "01":
+            if not known_keysets:
+                raise Exception("Don't have any known keysets to map short ids to")
+            for keyset_id in known_keysets.keys():
+                if short_keyset_id == keyset_id[:len(short_keyset_id)]:
+                    return keyset_id
+            raise Exception("Cannot map short keyset id to any known keyset.")
+        else:
+            raise Exception("Unknown short keyset id version")
+
 
 class Token(ABC):
-    @property
     @abstractmethod
-    def proofs(self) -> List[Proof]: ...
+    def proofs(self, known_keysets: Optional[Dict[str, WalletKeyset]]) -> List[Proof]: ...
 
     @property
     @abstractmethod
@@ -1042,17 +1057,25 @@ class TokenV3(Token):
     class Config:
         allow_population_by_field_name = True
 
-    @property
-    def proofs(self) -> List[Proof]:
-        return [proof for token in self.token for proof in token.proofs]
+    def proofs(self,
+        known_keysets: Optional[Dict[str, WalletKeyset]] = None
+    ) -> List[Proof]:
+        return [
+            Proof(
+                **proof.dict(exclude={"id"}),
+                id=match_keyset_from_short_id(proof.id, known_keysets)
+            )
+            for token in self.token
+            for proof in token.proofs
+        ]
 
     @property
     def amount(self) -> int:
-        return sum([p.amount for p in self.proofs])
+        return sum([p.amount for token in self.token for p in token.proofs])
 
     @property
     def keysets(self) -> List[str]:
-        return list({p.id for p in self.proofs})
+        return list({p.id for token in self.token for p in token.proofs})
 
     @property
     def mint(self) -> str:
@@ -1225,11 +1248,12 @@ class TokenV4(Token):
     def amount(self) -> int:
         return sum(self.amounts)
 
-    @property
-    def proofs(self) -> List[Proof]:
+    def proofs(self,
+        known_keysets: Optional[Dict[str, WalletKeyset]] = None
+    ) -> List[Proof]:
         return [
             Proof(
-                id=token.i.hex(),
+                id=match_keyset_from_short_id(token.i.hex(), known_keysets),
                 amount=p.a,
                 secret=p.s,
                 C=p.c.hex(),
@@ -1257,7 +1281,7 @@ class TokenV4(Token):
         if not len(tokenv3.mints) == 1:
             raise Exception("TokenV3 must contain proofs from only one mint.")
 
-        proofs = tokenv3.proofs
+        proofs = [p for t in tokenv3.token for p in t.proofs]
         proofs_by_id: Dict[str, List[Proof]] = {}
         for proof in proofs:
             proofs_by_id.setdefault(proof.id, []).append(proof)

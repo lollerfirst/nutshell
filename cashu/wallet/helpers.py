@@ -70,7 +70,7 @@ async def redeem_TokenV4(wallet: Wallet, token: TokenV4) -> Wallet:
     Redeem a token with a single mint.
     """
     await wallet.load_mint()
-    proofs_to_keep, _ = await wallet.redeem(token.proofs)
+    proofs_to_keep, _ = await wallet.redeem(token.proofs(known_keysets=wallet.keysets))
     print(f"Received {wallet.unit.str(sum_proofs(proofs_to_keep))}")
     return wallet
 

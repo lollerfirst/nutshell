@@ -66,7 +66,7 @@ def derive_keyset_id_v2(keys: Dict[int, PublicKey], unit: str, expiry: Optional[
     sorted_keys = dict(sorted(keys.items()))
     pubkeys_concat = b"".join([p.serialize() for _, p in sorted_keys.items()])
     pubkeys_concat += f"unit:{unit}".encode("utf-8")
-    pubkeys_concat += f"final_expiry:{expiry}".encode("utf-8") if expiry else ""
+    pubkeys_concat += f"final_expiry:{expiry}".encode("utf-8") if expiry else b""
     return f"01{hashlib.sha256(pubkeys_concat).hexdigest()}"
 
 def derive_keyset_id_deprecated(keys: Dict[int, PublicKey]):

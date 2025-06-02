@@ -817,7 +817,7 @@ async def burn(ctx: Context, token: str, all: bool, force: bool, delete: str):
     else:
         # check only the specified ones
         tokenObj = deserialize_token_from_string(token)
-        proofs = tokenObj.proofs
+        proofs = tokenObj.proofs(known_keysets=wallet.keysets)
 
     if delete:
         await wallet.invalidate(proofs)
