@@ -191,7 +191,7 @@ class WalletProofs(SupportsDb, SupportsKeysets):
 
         # append all url-grouped proofs to token
         for url, ids in mint_urls.items():
-            mint_proofs = [p for p in proofs if p.id in ids]
+            mint_proofs = [Proof(**p.dict(exclude={"id"}), id=p.id[:16]) for p in proofs if p.id in ids]
             token.token.append(TokenV3Token(mint=url, proofs=mint_proofs))
 
         return token
@@ -235,7 +235,7 @@ class WalletProofs(SupportsDb, SupportsKeysets):
             tokenv4_proofs = []
             for proof in proofs_keyset:
                 tokenv4_proofs.append(TokenV4Proof.from_proof(proof, include_dleq))
-            tokenv4_token = TokenV4Token(i=bytes.fromhex(keyset_id), p=tokenv4_proofs)
+            tokenv4_token = TokenV4Token(i=bytes.fromhex(keyset_id)[:8], p=tokenv4_proofs)
             tokens.append(tokenv4_token)
 
         return TokenV4(m=mint_url, u=unit_str, t=tokens, d=memo)
