@@ -663,7 +663,21 @@ class LedgerAPI(LedgerAPIDeprecated, SupportsAuth):
 
     @async_set_httpx_client
     @async_ensure_mint_loaded
-    async def restore_promises(
+    async def _get_spent_filter(self, keyset_id: str) -> dict:
+        """API that gets the spent filter for a specific keyset from the mint.
+
+        Args:
+            keyset_id (str): Keyset ID
+
+        Returns:
+            dict: Spent filter data
+
+        Raises:
+            Exception: If the request fails
+        """
+        resp = await self._request(GET, f"filter/spent/{keyset_id}")
+        self.raise_on_error_request(resp)
+        return resp.json()
         self, outputs: List[BlindedMessage]
     ) -> Tuple[List[BlindedMessage], List[BlindedSignature]]:
         """
