@@ -47,6 +47,7 @@ from ..core.models import (
     PostRestoreResponse,
     PostSwapRequest,
     PostSwapResponse,
+    GetFilterResponse,
 )
 from ..core.settings import settings
 from ..tor.tor import TorProxy
@@ -663,7 +664,7 @@ class LedgerAPI(LedgerAPIDeprecated, SupportsAuth):
 
     @async_set_httpx_client
     @async_ensure_mint_loaded
-    async def _get_spent_filter(self, keyset_id: str) -> dict:
+    async def _get_spent_filter(self, keyset_id: str) -> GetFilterResponse:
         """API that gets the spent filter for a specific keyset from the mint.
 
         Args:
@@ -677,7 +678,12 @@ class LedgerAPI(LedgerAPIDeprecated, SupportsAuth):
         """
         resp = await self._request(GET, f"filter/spent/{keyset_id}")
         self.raise_on_error_request(resp)
-        return resp.json()
+        response_dict = resp.json()
+        return GetFilterResponse.parse_obj(response_dict)
+
+    @async_set_httpx_client
+    @async_ensure_mint_loaded
+    async def restore_promises(
         self, outputs: List[BlindedMessage]
     ) -> Tuple[List[BlindedMessage], List[BlindedSignature]]:
         """
