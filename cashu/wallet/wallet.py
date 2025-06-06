@@ -1512,7 +1512,13 @@ class Wallet(
     async def get_spent_filters_for_keysets(
         self,
         keyset_ids: Set[str]
-    ) -> List[GetFilterResponse]: 
-        tasks = [super()._get_spent_filter(keyset_id) for keyset_id in keyset_ids]
+    ) -> Dict[str, Optional[GetFilterResponse]]:
+        async def do_get_spent_filter(keyset_id) -> Tuple[str, Optional[GetFilterResponse]]:
+            try:
+                return [keyset_id, await super()._get_spent_filter(keyset_id)]
+            except Exception:
+                return [keyset_id, None]
 
-        return await asyncio.gather(*tasks)
+        tasks = [do_get_spent_filter(keyset_id) for keyset_id in keyset_ids]
+        result = await asyncio.gather(*tasks)
+        return {keyset_id: filter_response for keyset_id, filter_response in result}    
