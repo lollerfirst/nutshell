@@ -1549,13 +1549,14 @@ class Wallet(
             Dict[str, Optional[GCSFilter]]: A dictionary mapping each keyset ID to its corresponding GCS filter,                                                     
             or None if the filter could not be retrieved.
         """
-        async def do_get_spent_filter(keyset_id) -> Tuple[str, Optional[GCSFilter]]:
+        async def do_get_spent_filter(wallet_instance, keyset_id) -> Tuple[str, Optional[GCSFilter]]:
             try:
-                return [keyset_id, GCSFilter.from_resp_wallet(await super()._get_spent_filter(keyset_id))]
-            except Exception:
+                return [keyset_id, GCSFilter.from_resp_wallet(await wallet_instance._get_spent_filter(keyset_id))]
+            except Exception as e:
+                print(f"Error getting the filter for keyset {keyset_id}: {str(e)}")
                 return [keyset_id, None]
 
-        tasks = [do_get_spent_filter(keyset_id) for keyset_id in keyset_ids]
+        tasks = [do_get_spent_filter(self, keyset_id) for keyset_id in keyset_ids]
         result = await asyncio.gather(*tasks)
         return {keyset_id: filter_response for keyset_id, filter_response in result}
 
