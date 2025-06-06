@@ -40,6 +40,7 @@ from ..core.models import (
     PostMeltQuoteResponse,
     GetFilterResponse,
 )
+from ..core.gcs import GCSFilter
 from ..core.nuts import nut20
 from ..core.p2pk import Secret
 from ..core.settings import settings
@@ -1345,7 +1346,11 @@ class Wallet(
     # ---------- RESTORE WALLET ----------
 
     async def restore_tokens_for_keyset(
-        self, keyset_id: str, to: int = 2, batch: int = 25
+        self,
+        keyset_id: str,
+        spent_filter: Optional[GCSFilter],
+        to: int = 2,
+        batch: int = 25,
     ) -> None:
         """
         Restores tokens for a given keyset_id.
@@ -1376,9 +1381,21 @@ class Wallet(
             if len(restored_proofs) == 0:
                 empty_batches += 1
                 continue
-            spendable_proofs = await self.invalidate(
-                restored_proofs, check_spendable=True
-            )
+            # Use GCS filter to determine SURELY unspent notes and MAYBE spent notes
+            spendable_proofs: List[Proof] = []
+            if spent_filter:
+                spendable_proofs, maybe_spent_proofs = self.gcs_test_proofs(spent_filter, restored_proofs)
+                unspent_proofs_mistakes = await self.invalidate(
+                    maybe_spent_proofs, check_spendable=True
+                )
+                spendable_proofs += unspent_proofs_mistakes
+                print(
+                    f"GCS filter test errors: {len(unspent_proofs_mistakes)}/{len(spendable_proofs)}"
+                )
+            else:
+                spendable_proofs = await self.invalidate(
+                    restored_proofs, check_spendable=True
+                )
             if len(spendable_proofs):
                 print(
                     f"Restored {sum_proofs(spendable_proofs)} sat for keyset {keyset_id}."
@@ -1416,9 +1433,16 @@ class Wallet(
         """
         await self._init_private_key(mnemonic)
         await self.load_mint(force_old_keysets=False)
+        print("Getting the spent ecash GCS filters...")
+        spent_filters = await self.get_spent_filters_for_keysets(set(self.keysets.keys()))
         print("Restoring tokens...")
         for keyset_id in self.keysets.keys():
-            await self.restore_tokens_for_keyset(keyset_id, to, batch)
+            await self.restore_tokens_for_keyset(
+                keyset_id,
+                spent_filters[keyset_id],
+                to=to,
+                batch=batch
+            )
 
     async def restore_promises_from_to(
         self, keyset_id: str, from_counter: int, to_counter: int
@@ -1512,13 +1536,20 @@ class Wallet(
     async def get_spent_filters_for_keysets(
         self,
         keyset_ids: Set[str]
-    ) -> Dict[str, Optional[GetFilterResponse]]:
-        async def do_get_spent_filter(keyset_id) -> Tuple[str, Optional[GetFilterResponse]]:
+    ) -> Dict[str, Optional[GCSFilter]]:
+        async def do_get_spent_filter(keyset_id) -> Tuple[str, Optional[GCSFilter]]:
             try:
-                return [keyset_id, await super()._get_spent_filter(keyset_id)]
+                return [keyset_id, GCSFilter.from_resp_wallet(await super()._get_spent_filter(keyset_id))]
             except Exception:
                 return [keyset_id, None]
 
         tasks = [do_get_spent_filter(keyset_id) for keyset_id in keyset_ids]
         result = await asyncio.gather(*tasks)
-        return {keyset_id: filter_response for keyset_id, filter_response in result}    
+        return {keyset_id: filter_response for keyset_id, filter_response in result}
+
+    def gcs_test_proofs(self, spent_filter: GCSFilter, proofs: List[Proof]) -> Tuple[List[Proof], List[Proof]]:
+        targets = [bytes.fromhex(p.C) for p in proofs]
+        results = spent_filter.match_many(targets)
+        maybe_spent = [p for t, p in zip(targets, proofs) if results[t] == True]
+        unspent = [p for t, p in zip(targets, proofs) if results[t] == False]
+        return unspent, maybe_spent
