@@ -671,7 +671,7 @@ class LedgerAPI(LedgerAPIDeprecated, SupportsAuth):
             keyset_id (str): Keyset ID
 
         Returns:
-            dict: Spent filter data
+            GetFilterResponse: Spent filter data
 
         Raises:
             Exception: If the request fails

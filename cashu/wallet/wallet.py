@@ -1,8 +1,9 @@
+import asyncio
 import copy
 import json
 import threading
 import time
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union, Set
 
 from bip32 import BIP32
 from loguru import logger
@@ -37,6 +38,7 @@ from ..core.mint_info import MintInfo
 from ..core.models import (
     PostCheckStateResponse,
     PostMeltQuoteResponse,
+    GetFilterResponse,
 )
 from ..core.nuts import nut20
 from ..core.p2pk import Secret
@@ -1506,3 +1508,11 @@ class Wallet(
         )
         logger.debug(f"Restored {len(restored_promises)} promises")
         return next_restored_output_index, proofs
+
+    async def get_spent_filters_for_keysets(
+        self,
+        keyset_ids: Set[str]
+    ) -> List[GetFilterResponse]: 
+        tasks = [super()._get_spent_filter(keyset_id) for keyset_id in keyset_ids]
+
+        return await asyncio.gather(*tasks)
