@@ -1537,6 +1537,18 @@ class Wallet(
         self,
         keyset_ids: Set[str]
     ) -> Dict[str, Optional[GCSFilter]]:
+        """Fetches spent filters for a set of keyset IDs.                         
+                                                                                  
+        This method retrieves the Golomb-Coded Set (GCS) filters for each keyset ID provided.                                                                      
+        These filters are used to determine which proofs have been spent.         
+                                                                                  
+        Args:                                                                     
+            keyset_ids (Set[str]): A set of keyset IDs for which to fetch the spent filters.                                                                    
+                                                                                  
+        Returns:                                                                  
+            Dict[str, Optional[GCSFilter]]: A dictionary mapping each keyset ID to its corresponding GCS filter,                                                     
+            or None if the filter could not be retrieved.
+        """
         async def do_get_spent_filter(keyset_id) -> Tuple[str, Optional[GCSFilter]]:
             try:
                 return [keyset_id, GCSFilter.from_resp_wallet(await super()._get_spent_filter(keyset_id))]
@@ -1548,6 +1560,20 @@ class Wallet(
         return {keyset_id: filter_response for keyset_id, filter_response in result}
 
     def gcs_test_proofs(self, spent_filter: GCSFilter, proofs: List[Proof]) -> Tuple[List[Proof], List[Proof]]:
+        """Tests proofs against a GCS filter to determine their spend status.     
+                                                                                  
+        This method uses a GCS filter to test a list of proofs and categorizes them into                                                                         
+        unspent and maybe spent based on the filter results.                      
+                                                                                  
+        Args:                                                                     
+            spent_filter (GCSFilter): The GCS filter used to test the proofs.     
+            proofs (List[Proof]): A list of proofs to be tested against the filter.                                                                           
+                                                                                  
+        Returns:                                                                  
+            Tuple[List[Proof], List[Proof]]: A tuple containing two lists:        
+                - The first list contains proofs that are determined to be unspent.                                                                          
+                - The second list contains proofs that are maybe spent.           
+        """     
         targets = [bytes.fromhex(p.C) for p in proofs]
         results = spent_filter.match_many(targets)
         maybe_spent = [p for t, p in zip(targets, proofs) if results[t] == True]
