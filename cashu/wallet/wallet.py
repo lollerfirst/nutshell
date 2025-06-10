@@ -1389,7 +1389,7 @@ class Wallet(
                     maybe_spent_proofs, check_spendable=True
                 )
                 spendable_proofs += unspent_proofs_mistakes
-                print(
+                logger.debug(
                     f"GCS filter test errors: {len(unspent_proofs_mistakes)}/{len(spendable_proofs)}"
                 )
             else:
