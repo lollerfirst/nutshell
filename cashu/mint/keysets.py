@@ -136,26 +136,16 @@ class LedgerKeysets(SupportsKeysets, SupportsSeed, SupportsDb):
         if not derivation_path:
             raise ValueError("Derivation path must be provided.")
 
-        seed = seed or self.seed
-        version = version or settings.version
-        # Initialize a temporary keyset to derive the ID
-        temp_keyset = MintKeyset(
-            seed=seed,
-            derivation_path=derivation_path,
-            version=version,
-            amounts=self.amounts,
-        )
-        logger.debug(
-            f"Activating keyset for derivation path '{derivation_path}' with ID '{temp_keyset.id}'."
-        )
-
         # Attempt to retrieve existing keysets from the database
         existing_keysets: List[MintKeyset] = await self.crud.get_keyset(
-            id=temp_keyset.id, db=self.db
+            derivation_path=derivation_path, db=self.db
         )
         logger.trace(
             f"Retrieved {len(existing_keysets)} keyset(s) for derivation path '{derivation_path}'."
         )
+
+        seed = seed or self.seed
+        version = version or settings.version
 
         if existing_keysets:
             keyset = existing_keysets[0]
