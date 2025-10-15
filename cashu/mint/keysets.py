@@ -39,6 +39,7 @@ class LedgerKeysets(SupportsKeysets, SupportsSeed, SupportsDb):
         unit: Unit,
         max_order: Optional[int] = None,
         input_fee_ppk: Optional[int] = None,
+        final_expiry: Optional[int] = None,
     ) -> MintKeyset:
         """
         This function:
@@ -52,6 +53,7 @@ class LedgerKeysets(SupportsKeysets, SupportsSeed, SupportsDb):
             unit (Unit): Unit of the keyset.
             max_order (Optional[int], optional): The number of keys to generate, which correspond to powers of 2.
             input_fee_ppk (Optional[int], optional):  The new keyset's fee
+            final_expiry (Optional[int], optional): The keyset's expiration date, after which it might be dropped from the database.
         Returns:
             MintKeyset: Resulting keyset of the rotation
         """
@@ -97,7 +99,7 @@ class LedgerKeysets(SupportsKeysets, SupportsSeed, SupportsDb):
             amounts=amounts,
             input_fee_ppk=input_fee_ppk,
             active=True,
-            final_expiry=None
+            final_expiry=final_expiry
         )
 
         logger.debug(f"New keyset was generated with Id {new_keyset.id}. Saving...")
