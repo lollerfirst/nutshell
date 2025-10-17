@@ -244,7 +244,7 @@ class LedgerCrud(ABC):
     async def get_melt_quotes_by_checking_id(
         self,
         *,
-        checking_id: Optional[str] = None,
+        checking_id: str,
         db: Database,
         conn: Optional[Connection] = None,
     ) -> List[MeltQuote]: ...
@@ -922,7 +922,7 @@ class LedgerCrudSqlite(LedgerCrud):
         db: Database,
         conn: Optional[Connection] = None,
     ) -> List[MeltQuote]:
-        results: List[Row] = await (conn or db).fetchall(
+        results = await (conn or db).fetchall(
             f"""
             SELECT * FROM {db.table_with_schema('melt_quotes')}
             WHERE checking_id = :checking_id

@@ -214,7 +214,11 @@ class DbWriteHelper:
             lock_select_statement=f"quote='{quote.quote}'",
         ) as conn:
             # get all melt quotes with same checking_id from db and check if there is one already pending
-            quotes_db = await self.crud.get_melt_quotes_by_checking_id(quote.checking_id)
+            quotes_db = await self.crud.get_melt_quotes_by_checking_id(
+                checking_id=quote.checking_id,
+                db=self.db,
+                conn=conn
+            )
             if len(quotes_db) == 0:
                 raise TransactionError("Melt quote not found.")
             if any([quote.state == MeltQuoteState.pending for quote in quotes_db]):
