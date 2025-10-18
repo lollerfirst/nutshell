@@ -211,7 +211,7 @@ class DbWriteHelper:
             raise TransactionError("Melt quote doesn't have checking ID.")
         async with self.db.get_connection(
             lock_table="melt_quotes",
-            lock_select_statement=f"quote='{quote.quote}'",
+            lock_select_statement=f"checking_id='{quote.checking_id}'",
         ) as conn:
             # get all melt quotes with same checking_id from db and check if there is one already pending
             quotes_db = await self.crud.get_melt_quotes_by_checking_id(
