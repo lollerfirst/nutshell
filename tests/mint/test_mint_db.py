@@ -328,7 +328,6 @@ async def test_db_update_melt_quote_state(wallet: Wallet, ledger: Ledger):
 @pytest.mark.asyncio
 async def test_get_melt_quotes_by_checking_id_empty(ledger: Ledger):
     """Test that get_melt_quotes_by_checking_id returns empty list for non-existent checking_id."""
-    from cashu.core.base import MeltQuote
     
     quotes = await ledger.crud.get_melt_quotes_by_checking_id(
         checking_id="non_existent_id",

@@ -968,13 +968,3 @@ async def m027_add_balance_to_keysets_and_log_table(db: Database):
                 );
             """
         )
-
-async def m028_unique_melt_quote_checking_id_if_pending(db: Database):
-    async with db.connect() as conn:
-        await conn.execute(
-            f"""
-                CREATE UNIQUE INDEX ux_melt_quotes_checking_id_pending
-                ON {db.table_with_schema('melt_quotes')} (checking_id)
-                WHERE state = 'PENDING'
-            """
-        )
