@@ -69,7 +69,7 @@ async def test_melt_external_async(ledger: Ledger, wallet1: Wallet):
 
     # create a melt quote for an external payment
     external_invoice = invoice_62_sat if is_fake else get_real_invoice(62)['payment_request']
-    quote = await wallet1.melt_quote(invoice_62_sat)
+    quote = await wallet1.melt_quote(external_invoice)
 
     # melt the proofs
     melt_resp = await wallet1.melt(proofs, external_invoice, quote.fee_reserve, quote.quote, prefer_async=True)
