@@ -7,7 +7,12 @@ from cashu.core.base import MeltQuoteState, Unit
 from cashu.core.settings import settings
 from cashu.mint.ledger import Ledger
 from cashu.wallet.wallet import Wallet
-from tests.helpers import get_real_invoice, is_fake, pay_if_regtest, is_deprecated_api_only
+from tests.helpers import (
+    get_real_invoice,
+    is_deprecated_api_only,
+    is_fake,
+    pay_if_regtest,
+)
 
 SERVER_ENDPOINT = "http://localhost:3337"
 invoice_62_sat = "lnbcrt620n1pn0r3vepp5zljn7g09fsyeahl4rnhuy0xax2puhua5r3gspt7ttlfrley6valqdqqcqzzsxqyz5vqsp577h763sel3q06tfnfe75kvwn5pxn344sd5vnays65f9wfgx4fpzq9qxpqysgqg3re9afz9rwwalytec04pdhf9mvh3e2k4r877tw7dr4g0fvzf9sny5nlfggdy6nduy2dytn06w50ls34qfldgsj37x0ymxam0a687mspp0ytr8"
