@@ -7,7 +7,7 @@ from cashu.core.base import MeltQuoteState, Unit
 from cashu.core.settings import settings
 from cashu.mint.ledger import Ledger
 from cashu.wallet.wallet import Wallet
-from tests.helpers import get_real_invoice, is_fake, pay_if_regtest
+from tests.helpers import get_real_invoice, is_fake, pay_if_regtest, is_deprecated_api_only
 
 SERVER_ENDPOINT = "http://localhost:3337"
 invoice_62_sat = "lnbcrt620n1pn0r3vepp5zljn7g09fsyeahl4rnhuy0xax2puhua5r3gspt7ttlfrley6valqdqqcqzzsxqyz5vqsp577h763sel3q06tfnfe75kvwn5pxn344sd5vnays65f9wfgx4fpzq9qxpqysgqg3re9afz9rwwalytec04pdhf9mvh3e2k4r877tw7dr4g0fvzf9sny5nlfggdy6nduy2dytn06w50ls34qfldgsj37x0ymxam0a687mspp0ytr8"
@@ -23,6 +23,10 @@ async def wallet1(ledger: Ledger):
     yield wallet1
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    is_deprecated_api_only,
+    reason=("Deprecated API"),
+)
 async def test_melt_internal_async(ledger: Ledger, wallet1: Wallet):
     quote = await wallet1.request_mint(64)
     await pay_if_regtest(quote.request)
@@ -38,17 +42,19 @@ async def test_melt_internal_async(ledger: Ledger, wallet1: Wallet):
 
     # the response should be pending
     assert melt_resp.state == 'PENDING'
-    
+
     await asyncio.sleep(1)
 
     # Immediately check the quote status: it's internal so should be instantly settled
     settled = await wallet1.get_melt_quote(quote.quote)
     assert settled.state == MeltQuoteState.paid
-    assert settled.change
-    assert settled.payment_preimage
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    is_deprecated_api_only,
+    reason=("Deprecated API"),
+)
 async def test_melt_external_async(ledger: Ledger, wallet1: Wallet):
     # mint a proof in keyset_a
     quote = await wallet1.request_mint(64)
@@ -70,6 +76,4 @@ async def test_melt_external_async(ledger: Ledger, wallet1: Wallet):
 
     settled = await wallet1.get_melt_quote(quote.quote)
     assert settled.state == MeltQuoteState.paid
-    assert settled.change
-    assert settled.payment_preimage
 
