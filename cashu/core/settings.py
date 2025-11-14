@@ -73,6 +73,13 @@ class MintSettings(CashuSettings):
 
     mint_retry_exponential_backoff_base_delay: int = Field(default=1)
     mint_retry_exponential_backoff_max_delay: int = Field(default=10)
+    
+    # Plugin system configuration
+    mint_plugin_dirs: List[str] = Field(
+        default=[],
+        title="Plugin directories",
+        description="List of directories to search for backend plugins.",
+    )
 
 
 class MintWatchdogSettings(MintSettings):

@@ -3,8 +3,10 @@
 
 import asyncio
 import importlib
+import os
 from copy import copy
-from typing import Dict
+from pathlib import Path
+from typing import Dict, List
 
 from loguru import logger
 
@@ -15,6 +17,7 @@ from ..core.db import Database
 from ..core.migrations import migrate_databases
 from ..core.settings import settings
 from ..lightning.base import LightningBackend
+from ..lightning.plugins import initialize_plugin_system, create_backend_instance
 from ..mint import migrations as mint_migrations
 from ..mint.auth import migrations as auth_migrations
 from ..mint.auth.server import AuthLedger
@@ -48,29 +51,37 @@ for key, value in settings.dict().items():
 
     logger.debug(f"{key}: {value}")
 
-wallets_module = importlib.import_module("cashu.lightning")
+# Initialize plugin system
+plugin_dirs = []
+if settings.mint_plugin_dirs:
+    plugin_dirs.extend(settings.mint_plugin_dirs)
+initialize_plugin_system(plugin_dirs)
 
 backends: Dict[Method, Dict[Unit, LightningBackend]] = {}
 if settings.mint_backend_bolt11_sat:
-    backend_bolt11_sat = getattr(wallets_module, settings.mint_backend_bolt11_sat)(
-        unit=Unit.sat
-    )
-    backends.setdefault(Method.bolt11, {})[Unit.sat] = backend_bolt11_sat
+    backend_bolt11_sat = create_backend_instance(settings.mint_backend_bolt11_sat, unit=Unit.sat)
+    if backend_bolt11_sat:
+        backends.setdefault(Method.bolt11, {})[Unit.sat] = backend_bolt11_sat
+    else:
+        raise Exception(f"Backend not found: {settings.mint_backend_bolt11_sat}")
 if settings.mint_backend_bolt11_msat:
-    backend_bolt11_msat = getattr(wallets_module, settings.mint_backend_bolt11_msat)(
-        unit=Unit.msat
-    )
-    backends.setdefault(Method.bolt11, {})[Unit.msat] = backend_bolt11_msat
+    backend_bolt11_msat = create_backend_instance(settings.mint_backend_bolt11_msat, unit=Unit.msat)
+    if backend_bolt11_msat:
+        backends.setdefault(Method.bolt11, {})[Unit.msat] = backend_bolt11_msat
+    else:
+        raise Exception(f"Backend not found: {settings.mint_backend_bolt11_msat}")
 if settings.mint_backend_bolt11_usd:
-    backend_bolt11_usd = getattr(wallets_module, settings.mint_backend_bolt11_usd)(
-        unit=Unit.usd
-    )
-    backends.setdefault(Method.bolt11, {})[Unit.usd] = backend_bolt11_usd
+    backend_bolt11_usd = create_backend_instance(settings.mint_backend_bolt11_usd, unit=Unit.usd)
+    if backend_bolt11_usd:
+        backends.setdefault(Method.bolt11, {})[Unit.usd] = backend_bolt11_usd
+    else:
+        raise Exception(f"Backend not found: {settings.mint_backend_bolt11_usd}")
 if settings.mint_backend_bolt11_eur:
-    backend_bolt11_eur = getattr(wallets_module, settings.mint_backend_bolt11_eur)(
-        unit=Unit.eur
-    )
-    backends.setdefault(Method.bolt11, {})[Unit.eur] = backend_bolt11_eur
+    backend_bolt11_eur = create_backend_instance(settings.mint_backend_bolt11_eur, unit=Unit.eur)
+    if backend_bolt11_eur:
+        backends.setdefault(Method.bolt11, {})[Unit.eur] = backend_bolt11_eur
+    else:
+        raise Exception(f"Backend not found: {settings.mint_backend_bolt11_eur}")
 if not backends:
     raise Exception("No backends are set.")
 
